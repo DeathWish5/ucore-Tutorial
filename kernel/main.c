@@ -17,8 +17,10 @@ void clean_bss() {
 
 void main() {
     clean_bss();
-    printf("hello wrold!\n");
     trapinit();
     batchinit();
-    run_next_app();
+    procinit();
+    run_all_app();
+    printf("start scheduler!\n");
+    scheduler();
 }

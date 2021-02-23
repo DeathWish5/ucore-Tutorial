@@ -55,4 +55,4 @@ enum Exception {
     Unknown,
 };
 
-void usertrapret(struct trapframe* trapframe, uint64 kstack);
+void usertrapret();

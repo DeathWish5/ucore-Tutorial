@@ -1,9 +1,19 @@
 #include "defs.h"
 #include "trap.h"
+#include "proc.h"
 
 static int app_cur, app_num;
 static uint64* app_info_ptr;
-extern char _app_num[], userret[], boot_stack[];
+extern char _app_num[];
+
+int fin = 0;
+
+int finished() {
+    ++fin;
+    if(fin >= app_num)
+        panic("all apps over\n");
+    return 0;
+}
 
 void batchinit() {
     app_info_ptr = (uint64*) _app_num;
@@ -11,22 +21,17 @@ void batchinit() {
     app_num = *app_info_ptr;
 }
 
-__attribute__ ((aligned (16))) char user_stack[4096*16];
-__attribute__ ((aligned (16))) char trap_page[4096];
-
-int run_next_app() {
-    struct trapframe* trapframe = (struct trapframe*)trap_page;
-    app_cur++;
-    app_info_ptr++;
-    if(app_cur >= app_num) {
-        return -1;
+int run_all_app() {
+    for(int i = 0; i < app_num; ++i) {
+        app_cur++;
+        app_info_ptr++;
+        struct proc* p = allocproc();
+        struct trapframe* trapframe = p->trapframe;
+        printf("run app %d\n", app_cur);
+        uint64 entry = *app_info_ptr;
+        trapframe->epc = entry;
+        trapframe->sp = (uint64) p->ustack + PAGE_SIZE;
+        p->state = RUNNABLE;
     }
-    printf("run app %d\n", app_cur);
-    uint64 entry = *app_info_ptr;
-    memset(trapframe, 0, 4096);
-    trapframe->epc = entry;
-    printf("entry = %p\n", trapframe->epc);
-    trapframe->sp = (uint64) user_stack + 4096*16;
-    usertrapret(trapframe, (uint64)boot_stack);
     return 0;
 }

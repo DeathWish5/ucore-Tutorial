@@ -1,4 +1,6 @@
 #include "types.h"
+struct context;
+struct proc;
 
 // panic.c
 void loop();
@@ -18,6 +20,7 @@ void printf(char *, ...);
 
 // trap.c
 void trapinit();
+void usertrapret();
 
 // string.c
 int memcmp(const void *, const void *, uint);
@@ -31,9 +34,23 @@ char *strncpy(char *, const char *, int);
 // syscall.c
 void syscall();
 
+// swtch.S
+void swtch(struct context *, struct context *);
+
 // batch.c
+int finished();
 void batchinit();
-int run_next_app();
+int run_all_app();
+
+// proc.c
+struct proc *curr_proc();
+void exit(int);
+void procinit(void);
+void scheduler(void) __attribute__((noreturn));
+void sched(void);
+void yield(void);
+struct proc* allocproc();
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x) / sizeof((x)[0]))
+#define PAGE_SIZE (4096)

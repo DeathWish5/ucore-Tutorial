@@ -79,12 +79,3 @@ void printf(char *fmt, ...) {
         }
     }
 }
-
-void
-panic(char *s)
-{
-    printf("panic: ");
-    printf(s);
-    printf("\n");
-    loop();
-}

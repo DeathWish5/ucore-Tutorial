@@ -1,6 +1,7 @@
-#include "riscv.h"
 #include "defs.h"
 #include "trap.h"
+#include "proc.h"
+#include "riscv.h"
 
 extern char trampoline[], uservec[], boot_stack[];
 extern void* userret(uint64);
@@ -24,8 +25,10 @@ void usertrap(struct trapframe *trapframe)
     if(cause == UserEnvCall) {
         trapframe->epc += 4;
         syscall();
-        return usertrapret(trapframe, (uint64)boot_stack);
+        usertrapret();
+        // should not reach here!
     }
+    // unsupported trap
     switch(cause) {
         case StoreFault:
         case StorePageFault:
@@ -47,21 +50,18 @@ void usertrap(struct trapframe *trapframe)
             printf("unknown trap: %p, stval = %p sepc = %p\n", r_scause(), r_stval(), r_sepc());
             break;
     }
-    printf("switch to next app\n");
-    run_next_app();
-    printf("all apps over\n");
-    shutdown();
+    exit(-1);
 }
 
 //
 // return to user space
 //
-void usertrapret(struct trapframe* trapframe, uint64 kstack)
-{
-    trapframe->kernel_satp = r_satp();         // kernel page table
-    trapframe->kernel_sp = kstack + PGSIZE; // process's kernel stack
-    trapframe->kernel_trap = (uint64)usertrap;
-    trapframe->kernel_hartid = r_tp();         // hartid for cpuid()
+void usertrapret() {
+    struct trapframe *trapframe = curr_proc()->trapframe;
+    trapframe->kernel_satp = r_satp();                   // kernel page table
+    trapframe->kernel_sp = curr_proc()->kstack + PGSIZE;// process's kernel stack
+    trapframe->kernel_trap = (uint64) usertrap;
+    trapframe->kernel_hartid = r_tp();// hartid for cpuid()
 
     w_sepc(trapframe->epc);
     // set up the registers that trampoline.S's sret will use
@@ -69,11 +69,11 @@ void usertrapret(struct trapframe* trapframe, uint64 kstack)
 
     // set S Previous Privilege mode to User.
     uint64 x = r_sstatus();
-    x &= ~SSTATUS_SPP; // clear SPP to 0 for user mode
-    x |= SSTATUS_SPIE; // enable interrupts in user mode
+    x &= ~SSTATUS_SPP;// clear SPP to 0 for user mode
+    x |= SSTATUS_SPIE;// enable interrupts in user mode
     w_sstatus(x);
 
     // tell trampoline.S the user page table to switch to.
     // uint64 satp = MAKE_SATP(p->pagetable);
-    userret((uint64)trapframe);
+    userret((uint64) trapframe);
 }
