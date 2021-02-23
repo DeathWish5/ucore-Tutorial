@@ -9,27 +9,60 @@ extern void* userret(uint64);
 // set up to take exceptions and traps while in the kernel.
 void trapinit(void)
 {
-    w_stvec((uint64)uservec & ~0x3);
+   set_kerneltrap();
+}
+
+void unknown_trap() {
+    printf("unknown trap: %p, stval = %p\n", r_scause(), r_stval());
+    exit(-1);
+}
+
+
+void kerneltrap() {
+    if((r_sstatus() & SSTATUS_SPP) == 0)
+        panic("kerneltrap: not from supervisor mode");
+    panic("trap from kernel\n");
+}
+
+// set up to take exceptions and traps while in the kernel.
+void set_usertrap(void) {
+    w_stvec((uint64)uservec & ~0x3); // DIRECT
+}
+
+void set_kerneltrap(void) {
+    w_stvec((uint64)kerneltrap & ~0x3); // DIRECT
 }
 
 //
 // handle an interrupt, exception, or system call from user space.
 // called from trampoline.S
 //
-void usertrap(struct trapframe *trapframe)
-{
-    if((r_sstatus() & SSTATUS_SPP) != 0)
+void usertrap() {
+    set_kerneltrap();
+    struct trapframe *trapframe = curr_proc()->trapframe;
+
+    if ((r_sstatus() & SSTATUS_SPP) != 0)
         panic("usertrap: not from user mode");
 
     uint64 cause = r_scause();
-    if(cause == UserEnvCall) {
-        trapframe->epc += 4;
-        syscall();
-        usertrapret();
-        // should not reach here!
-    }
-    // unsupported trap
-    switch(cause) {
+    if(cause & (1ULL << 63)) {
+        cause &= ~(1ULL << 63);
+        switch(cause) {
+        case SupervisorTimer:
+            printf("time interrupt!\n");
+            set_next_timer();
+            yield();
+            break;
+        default:
+            unknown_trap();
+            break;
+        }
+    } else {
+        switch(cause) {
+        case UserEnvCall:
+            trapframe->epc += 4;
+            syscall();
+            break;
         case StoreFault:
         case StorePageFault:
         case InstructionFault:
@@ -42,21 +75,25 @@ void usertrap(struct trapframe *trapframe)
                     r_stval(),
                     trapframe->epc
             );
+            exit(-2);
             break;
         case IllegalInstruction:
-            printf("IllegalInstruction in application, epc = %p, core dumped.\n", trapframe->epc);
+            printf("IllegalInstruction in application, core dumped.\n");
+            exit(-3);
             break;
         default:
-            printf("unknown trap: %p, stval = %p sepc = %p\n", r_scause(), r_stval(), r_sepc());
+            unknown_trap();
             break;
+        }
     }
-    exit(-1);
+    usertrapret();
 }
 
 //
 // return to user space
 //
 void usertrapret() {
+    set_usertrap();
     struct trapframe *trapframe = curr_proc()->trapframe;
     trapframe->kernel_satp = r_satp();                   // kernel page table
     trapframe->kernel_sp = curr_proc()->kstack + PGSIZE;// process's kernel stack

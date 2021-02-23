@@ -20,6 +20,7 @@ void main() {
     trapinit();
     batchinit();
     procinit();
+    timerinit();
     run_all_app();
     printf("start scheduler!\n");
     scheduler();
