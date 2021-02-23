@@ -2,8 +2,10 @@
 .vscode
 .idea/
 target
+user/asm/
 user/build/
 user/target/
+kernel/kernel_app.ld
 link_app.S
 *.o
 *.d
