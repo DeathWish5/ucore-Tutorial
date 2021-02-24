@@ -8,6 +8,7 @@ AS = $(TOOLPREFIX)gas
 LD = $(TOOLPREFIX)ld
 OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
+GDB = $(TOOLPREFIX)gdb
 
 CFLAGS = -Wall -Werror -O -fno-omit-frame-pointer -ggdb
 CFLAGS += -MD
@@ -51,5 +52,15 @@ QEMUOPTS = \
 
 run: kernel
 	$(QEMU) $(QEMUOPTS)
+
+# QEMU's gdb stub command line changed in 0.11
+QEMUGDB = $(shell if $(QEMU) -help | grep -q '^-gdb'; \
+	then echo "-gdb tcp::1234"; \
+	else echo "-s -p 1234"; fi)
+
+debug: kernel .gdbinit
+	$(QEMU) $(QEMUOPTS) -S $(QEMUGDB) &
+	sleep 1
+	$(GDB)
 
 
