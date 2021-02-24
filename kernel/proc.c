@@ -1,11 +1,11 @@
 #include "defs.h"
 #include "proc.h"
 #include "trap.h"
+#include "riscv.h"
 
 struct proc pool[NPROC];
-char kstack[NPROC][PAGE_SIZE];
-char ustack[NPROC][PAGE_SIZE*4];
-char trapframe[NPROC][PAGE_SIZE];
+
+__attribute__ ((aligned (16))) char kstack[NPROC][KSTACK_SIZE];
 
 extern char boot_stack[];
 struct proc* current_proc;
@@ -22,9 +22,7 @@ procinit(void)
     struct proc *p;
     for(p = pool; p < &pool[NPROC]; p++) {
         p->state = UNUSED;
-        p->kstack = (uint64)kstack[p - pool];
-        p->ustack = (uint64)ustack[p - pool];
-        p->trapframe = (struct trapframe*)trapframe[p - pool];
+        p->kstack = (uint64) kstack[p - pool];
     }
     idle.kstack = (uint64)boot_stack;
     idle.pid = 0;
@@ -46,14 +44,13 @@ struct proc* allocproc(void)
     }
     return 0;
 
-    found:
+found:
     p->pid = allocpid();
     p->state = USED;
     memset(&p->context, 0, sizeof(p->context));
-    memset(p->trapframe, 0, PAGE_SIZE);
-    memset((void*)p->kstack, 0, PAGE_SIZE);
+    memset((void*)p->kstack, 0, KSTACK_SIZE);
     p->context.ra = (uint64)usertrapret;
-    p->context.sp = p->kstack + PAGE_SIZE;
+    p->context.sp = p->kstack + PGSIZE;
     return p;
 }
 
@@ -67,6 +64,7 @@ scheduler(void)
             if(p->state == RUNNABLE) {
                 p->state = RUNNING;
                 current_proc = p;
+                printf("switch to next proc\n");
                 swtch(&idle.context, &p->context);
             }
         }

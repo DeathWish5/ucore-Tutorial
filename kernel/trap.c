@@ -2,21 +2,14 @@
 #include "trap.h"
 #include "proc.h"
 #include "riscv.h"
+#include "memory_layout.h"
 
-extern char trampoline[], uservec[], boot_stack[];
-extern void* userret(uint64);
+extern char trampoline[], uservec[], userret[];
 
-// set up to take exceptions and traps while in the kernel.
-void trapinit(void)
-{
-   set_kerneltrap();
+void trapinit() {
+    // intr_on();
+    set_kerneltrap();
 }
-
-void unknown_trap() {
-    printf("unknown trap: %p, stval = %p\n", r_scause(), r_stval());
-    exit(-1);
-}
-
 
 void kerneltrap() {
     if((r_sstatus() & SSTATUS_SPP) == 0)
@@ -26,11 +19,16 @@ void kerneltrap() {
 
 // set up to take exceptions and traps while in the kernel.
 void set_usertrap(void) {
-    w_stvec((uint64)uservec & ~0x3); // DIRECT
+    w_stvec(((uint64) TRAMPOLINE + (uservec - trampoline)) & ~0x3); // DIRECT
 }
 
 void set_kerneltrap(void) {
     w_stvec((uint64)kerneltrap & ~0x3); // DIRECT
+}
+
+void unknown_trap() {
+    printf("unknown trap: %p, stval = %p\n", r_scause(), r_stval());
+    exit(-1);
 }
 
 //
@@ -89,9 +87,6 @@ void usertrap() {
     usertrapret();
 }
 
-//
-// return to user space
-//
 void usertrapret() {
     set_usertrap();
     struct trapframe *trapframe = curr_proc()->trapframe;
@@ -111,6 +106,8 @@ void usertrapret() {
     w_sstatus(x);
 
     // tell trampoline.S the user page table to switch to.
-    // uint64 satp = MAKE_SATP(p->pagetable);
-    userret((uint64) trapframe);
+    uint64 satp = MAKE_SATP(curr_proc()->pagetable);
+    printf("return to user\n");
+    uint64 fn = TRAMPOLINE + (userret - trampoline);
+    ((void (*)(uint64,uint64))fn)(TRAPFRAME, satp);
 }
