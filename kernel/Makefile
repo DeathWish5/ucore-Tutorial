@@ -61,4 +61,14 @@ QEMUOPTS = \
 run: kernel
 	$(QEMU) $(QEMUOPTS)
 
+# QEMU's gdb stub command line changed in 0.11
+QEMUGDB = $(shell if $(QEMU) -help | grep -q '^-gdb'; \
+	then echo "-gdb tcp::$(GDBPORT)"; \
+	else echo "-s -p $(GDBPORT)"; fi)
+
+debug: $K/kernel .gdbinit
+	$(QEMU) $(QEMUOPTS) -S $(QEMUGDB) &
+	sleep 1
+	$(GDB)
+
 

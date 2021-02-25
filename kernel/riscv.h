@@ -1,4 +1,4 @@
-#include "defs.h"
+#include "types.h"
 
 // which hart (core) is this?
 static inline uint64 r_mhartid() {
@@ -307,11 +307,3 @@ static inline void sfence_vma() {
 #define PXSHIFT(level) (PGSHIFT + (9 * (level)))
 #define PX(level, va) ((((uint64)(va)) >> PXSHIFT(level)) & PXMASK)
 
-// one beyond the highest possible virtual address.
-// MAXVA is actually one bit less than the max allowed by
-// Sv39, to avoid having to sign-extend virtual addresses
-// that have the high bit set.
-#define MAXVA (1L << (9 + 9 + 9 + 12 - 1))
-
-typedef uint64 pte_t;
-typedef uint64 *pagetable_t;// 512 PTEs

@@ -9,15 +9,17 @@ void clean_bss() {
         *p = 0;
 }
 
+int debug_level = INFO;
+
 void main() {
     clean_bss();
     trapinit();
     kinit();
+    procinit();
     kvminit();
     batchinit();
-    procinit();
     timerinit();
     run_all_app();
-    printf("start scheduler!\n");
+    info("start scheduler!\n");
     scheduler();
 }

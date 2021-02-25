@@ -17,6 +17,7 @@ void consputc(int);
 
 // printf.c
 void printf(char *, ...);
+#include "logger.h"
 
 // trap.c
 void trapinit();
@@ -40,18 +41,22 @@ void syscall();
 void swtch(struct context *, struct context *);
 
 // loader.c
-int finished();
 void batchinit();
 int run_all_app();
+int get_id_by_name(char* name);
+void loader(int, void*);
 
 // proc.c
 struct proc *curr_proc();
 void exit(int);
-void procinit();
-void scheduler() __attribute__((noreturn));
-void sched();
-void yield();
-struct proc* allocproc();
+void procinit(void);
+void scheduler(void) __attribute__((noreturn));
+void sched(void);
+void yield(void);
+int fork(void);
+int exec(char*);
+int wait(int, int*);
+struct proc *allocproc();
 
 // kalloc.c
 void *kalloc(void);
@@ -80,6 +85,7 @@ int copyinstr(pagetable_t, char *, uint64, uint64);
 uint64 get_cycle();
 void timerinit();
 void set_next_timer();
+uint64 get_time_ms();
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x) / sizeof((x)[0]))

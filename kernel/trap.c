@@ -7,7 +7,7 @@
 extern char trampoline[], uservec[], userret[];
 
 void trapinit() {
-    // intr_on();
+    intr_on();
     set_kerneltrap();
 }
 
@@ -27,7 +27,7 @@ void set_kerneltrap(void) {
 }
 
 void unknown_trap() {
-    printf("unknown trap: %p, stval = %p\n", r_scause(), r_stval());
+    error("unknown trap: %p, stval = %p sepc = %p\n", r_scause(), r_stval(), r_sepc());
     exit(-1);
 }
 
@@ -47,7 +47,7 @@ void usertrap() {
         cause &= ~(1ULL << 63);
         switch(cause) {
         case SupervisorTimer:
-            printf("time interrupt!\n");
+            info("time interrupt!\n");
             set_next_timer();
             yield();
             break;
@@ -67,7 +67,7 @@ void usertrap() {
         case InstructionPageFault:
         case LoadFault:
         case LoadPageFault:
-            printf(
+            error(
                     "%d in application, bad addr = %p, bad instruction = %p, core dumped.\n",
                     cause,
                     r_stval(),
@@ -76,7 +76,7 @@ void usertrap() {
             exit(-2);
             break;
         case IllegalInstruction:
-            printf("IllegalInstruction in application, core dumped.\n");
+            error("IllegalInstruction in application, epc = %p, core dumped.\n", trapframe->epc);
             exit(-3);
             break;
         default:
@@ -107,7 +107,7 @@ void usertrapret() {
 
     // tell trampoline.S the user page table to switch to.
     uint64 satp = MAKE_SATP(curr_proc()->pagetable);
-    printf("return to user\n");
+    trace("return to user at %p\n", trapframe->epc);
     uint64 fn = TRAMPOLINE + (userret - trampoline);
     ((void (*)(uint64,uint64))fn)(TRAPFRAME, satp);
 }

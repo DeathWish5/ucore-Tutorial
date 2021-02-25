@@ -6,8 +6,6 @@ void loop() {
 
 void panic(char *s)
 {
-    printf("panic: ");
-    printf(s);
-    printf("\n");
+    error("panic: %s", s);
     shutdown();
 }

@@ -2,17 +2,21 @@
 #include "proc.h"
 #include "trap.h"
 #include "riscv.h"
+#include "memory_layout.h"
 
 struct proc pool[NPROC];
 
 __attribute__ ((aligned (16))) char kstack[NPROC][KSTACK_SIZE];
+extern char trampoline[];
 
 extern char boot_stack[];
-struct proc* current_proc;
+struct proc* current_proc = 0;
 struct proc idle;
-
+int curr_pid = 0;
 
 struct proc* curr_proc() {
+    if(current_proc == 0)
+        return &idle;
     return current_proc;
 }
 
@@ -26,12 +30,61 @@ procinit(void)
     }
     idle.kstack = (uint64)boot_stack;
     idle.pid = 0;
-    idle.killed = 0;
 }
 
 int allocpid() {
     static int PID = 1;
     return PID++;
+}
+
+pagetable_t
+proc_pagetable(struct proc *p)
+{
+    pagetable_t pagetable;
+
+    // An empty page table.
+    pagetable = uvmcreate();
+    if(pagetable == 0)
+        panic("");
+
+    if(mappages(pagetable, TRAMPOLINE, PGSIZE,
+                (uint64)trampoline, PTE_R | PTE_X) < 0){
+        uvmfree(pagetable, 0);
+        return 0;
+    }
+
+    if((p->trapframe = (struct trapframe *)kalloc()) == 0){
+        panic("kalloc\n");
+    }
+    // map the trapframe just below TRAMPOLINE, for trampoline.S.
+    if(mappages(pagetable, TRAPFRAME, PGSIZE,
+                (uint64)(p->trapframe), PTE_R | PTE_W) < 0){;
+        panic("");
+    }
+
+    return pagetable;
+}
+
+// Free a process's page table, and free the
+// physical memory it refers to.
+void
+proc_freepagetable(pagetable_t pagetable, uint64 sz)
+{
+    uvmunmap(pagetable, TRAMPOLINE, 1, 0);
+    uvmunmap(pagetable, TRAPFRAME, 1, 0);
+    uvmfree(pagetable, sz);
+}
+
+static void
+freeproc(struct proc *p)
+{
+    if(p->trapframe)
+        kfree((void*)p->trapframe);
+    p->trapframe = 0;
+    if(p->pagetable)
+        proc_freepagetable(p->pagetable, p->sz);
+    p->pagetable = 0;
+    p->state = UNUSED;
 }
 
 struct proc* allocproc(void)
@@ -47,6 +100,15 @@ struct proc* allocproc(void)
 found:
     p->pid = allocpid();
     p->state = USED;
+    p->sz = 0;
+    p->exit_code = -1;
+    p->parent = 0;
+    p->ustack = 0;
+    p->pagetable = proc_pagetable(p);
+    if(p->pagetable == 0){
+        panic("");
+    }
+
     memset(&p->context, 0, sizeof(p->context));
     memset((void*)p->kstack, 0, KSTACK_SIZE);
     p->context.ra = (uint64)usertrapret;
@@ -54,20 +116,25 @@ found:
     return p;
 }
 
+
 void
 scheduler(void)
 {
     struct proc *p;
-
     for(;;){
+        int all_done = 1;
         for(p = pool; p < &pool[NPROC]; p++) {
             if(p->state == RUNNABLE) {
+                all_done = 0;
                 p->state = RUNNING;
                 current_proc = p;
-                printf("switch to next proc\n");
+                curr_pid = p->pid;
+                // info("switch to next proc %d\n", p->pid);
                 swtch(&idle.context, &p->context);
             }
         }
+        if(all_done)
+            panic("all apps over\n");
     }
 }
 
@@ -94,10 +161,88 @@ void yield(void)
     sched();
 }
 
+int
+fork(void)
+{
+    int pid;
+    struct proc *np;
+    struct proc *p = curr_proc();
+
+    // Allocate process.
+    if((np = allocproc()) == 0){
+        panic("allocproc\n");
+    }
+
+    // Copy user memory from parent to child.
+    if(uvmcopy(p->pagetable, np->pagetable, p->sz) < 0){
+        panic("uvmcopy\n");
+    }
+    np->sz = p->sz;
+
+    // copy saved user registers.
+    *(np->trapframe) = *(p->trapframe);
+
+    // Cause fork to return 0 in the child.
+    np->trapframe->a0 = 0;
+    pid = np->pid;
+    np->parent = p;
+    np->state = RUNNABLE;
+    return pid;
+}
+
+int exec(char* name) {
+    int id = get_id_by_name(name);
+    if(id < 0)
+        return -1;
+    struct proc *p = curr_proc();
+    proc_freepagetable(p->pagetable, p->sz);
+    p->sz = 0;
+    p->pagetable = proc_pagetable(p);
+    if(p->pagetable == 0){
+        panic("");
+    }
+    loader(id, p);
+    return 0;
+}
+
+int
+wait(int pid, int* code)
+{
+    struct proc *np;
+    int havekids;
+    struct proc *p = curr_proc();
+
+    for(;;){
+        // Scan through table looking for exited children.
+        havekids = 0;
+        for(np = pool; np < &pool[NPROC]; np++){
+            if(np->state != UNUSED && np->parent == p && (pid <= 0 || np->pid == pid)){
+                havekids = 1;
+                if(np->state == ZOMBIE){
+                    // Found one.
+                    np->state = UNUSED;
+                    pid = np->pid;
+                    *code = np->exit_code;
+                    return pid;
+                }
+            }
+        }
+        if(!havekids){
+            return -1;
+        }
+        p->state = RUNNABLE;
+        sched();
+    }
+}
+
 void exit(int code) {
     struct proc *p = curr_proc();
-    printf("proc %d exit with %d\n", p->pid, code);
-    p->state = UNUSED;
-    finished();
+    p->exit_code = code;
+    info("proc %d exit with %d\n", p->pid, code);
+    freeproc(p);
+    if(p->parent != 0) {
+        trace("wait for parent to clean\n");
+        p->state = ZOMBIE;
+    }
     sched();
 }

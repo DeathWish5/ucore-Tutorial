@@ -1,4 +1,4 @@
-#define NPROC (16)
+#define NPROC (256)
 #define KSTACK_SIZE (4096)
 #define USTACK_SIZE (4096)
 #define TRAPFRAME_SIZE (4096)
@@ -28,12 +28,13 @@ enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 struct proc {
     // p->lock must be held when using these:
     enum procstate state;        // Process state
-    int killed;                  // If non-zero, have been killed
     int pid;                     // Process ID
     pagetable_t pagetable;       // User page table
-    // these are private to the process, so p->lock need not be held.
     uint64 ustack;
     uint64 kstack;               // Virtual address of kernel stack
     struct trapframe *trapframe; // data page for trampoline.S
     struct context context;      // swtch() here to run process
+    uint64 sz;
+    struct proc *parent;         // Parent process
+    uint64 exit_code;
 };
