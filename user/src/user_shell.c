@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+
 const unsigned char LF = 0x0a;
 const unsigned char CR = 0x0d;
 const unsigned char DL = 0x7f;

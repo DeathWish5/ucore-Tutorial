@@ -3,28 +3,82 @@
 #include "trap.h"
 #include "proc.h"
 
-uint64 sys_write(int fd, uint64 va, uint len) {
-    if (fd != 0)
-        return -1;
+#define min(a, b) a < b ? a : b;
+
+uint64 console_write(uint64 va, uint64 len) {
     struct proc *p = curr_proc();
-    char* str = (char*)useraddr(p->pagetable, va);
-    int size = MIN(strlen(str), len);
+    char str[200];
+    int size = MIN(len, 200);
+    copyin(p->pagetable, str, va, size);
     for(int i = 0; i < size; ++i) {
         console_putchar(str[i]);
     }
     return size;
 }
 
-uint64 sys_read(int fd, uint64 va, uint64 len) {
-    if (fd != 0)
-        return -1;
+uint64 console_read(uint64 va, uint64 len) {
     struct proc *p = curr_proc();
-    char* str = (char*)useraddr(p->pagetable, va);
     for(int i = 0; i < len; ++i) {
-        int c = console_getchar();
-        str[i] = c;
+        char c = console_getchar();
+        copyout(p->pagetable, va, &c, 1);
     }
     return len;
+}
+
+uint64 sys_write(int fd, uint64 va, uint64 len) {
+    if(fd == 0) {
+        return console_write(va, len);
+    }
+    struct proc *p = curr_proc();
+    struct file *f = p->files[fd];
+    if(f->type == FD_PIPE) {
+        info("write to pipe at %p\n", f->pipe);
+        return pipewrite(f->pipe, va, len);
+    }
+    error("unknown file type %d\n", f->type);
+    panic("syswrite: unknown file type\n");
+    return -1;
+}
+
+uint64 sys_read(int fd, uint64 va, uint64 len) {
+    if(fd == 0) {
+        return console_read(va, len);
+    }
+    struct proc *p = curr_proc();
+    struct file *f = p->files[fd];
+    if(f->type == FD_PIPE) {
+        info("read to pipe at %p\n", f->pipe);
+        return piperead(f->pipe, va, len);
+    }
+    error("unknown file type %d\n", f->type);
+    panic("sysread: unknown file type\n");
+    return -1;
+}
+
+uint64
+sys_pipe(uint64 fdarray) {
+    info("init pipe\n");
+    struct proc *p = curr_proc();
+    uint64 fd0, fd1;
+    struct file* f0, *f1;
+    if(f0 < 0 || f1 < 0) {
+        return -1;
+    }
+    f0 = filealloc();
+    f1 = filealloc();
+    if(pipealloc(f0, f1) < 0)
+        return -1;
+    fd0 = fdalloc(f0);
+    fd1 = fdalloc(f1);
+    if(copyout(p->pagetable, fdarray, (char*)&fd0, sizeof(fd0)) < 0 ||
+       copyout(p->pagetable, fdarray+sizeof(uint64), (char *)&fd1, sizeof(fd1)) < 0){
+        fileclose(f0);
+        fileclose(f1);
+        p->files[fd0] = 0;
+        p->files[fd1] = 0;
+        return -1;
+    }
+    return 0;
 }
 
 uint64 sys_exit(int code) {
@@ -42,6 +96,7 @@ uint64 sys_getpid() {
 }
 
 uint64 sys_clone() {
+    info("fork!\n");
     return fork();
 }
 
@@ -60,6 +115,20 @@ uint64 sys_wait(int pid, uint64 va) {
 
 uint64 sys_times() {
     return get_time_ms();
+}
+
+uint64 sys_close(int fd) {
+    if(fd == 0)
+        return 0;
+    struct proc *p = curr_proc();
+    struct file *f = p->files[fd];
+    if(f->type != FD_PIPE) {
+        error("unknown file type %d\n", f->type);
+        panic("fileclose: unknown file type\n");
+    }
+    fileclose(f);
+    p->files[fd] = 0;
+    return 0;
 }
 
 void syscall() {
@@ -95,6 +164,12 @@ void syscall() {
             break;
         case SYS_times:
             ret = sys_times();
+            break;
+        case SYS_pipe2:
+            ret = sys_pipe(args[0]);
+            break;
+        case SYS_close:
+            ret = sys_close(args[0]);
             break;
         default:
             ret = -1;

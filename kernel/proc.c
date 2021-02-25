@@ -2,6 +2,7 @@
 #include "proc.h"
 #include "trap.h"
 #include "riscv.h"
+#include "file.h"
 #include "memory_layout.h"
 
 struct proc pool[NPROC];
@@ -85,6 +86,12 @@ freeproc(struct proc *p)
         proc_freepagetable(p->pagetable, p->sz);
     p->pagetable = 0;
     p->state = UNUSED;
+    for(int i = 0; i < FD_MAX; ++i) {
+        if(p->files[i] != 0) {
+            fileclose(p->files[i]);
+            p->files[i] = 0;
+        }
+    }
 }
 
 struct proc* allocproc(void)
@@ -182,6 +189,12 @@ fork(void)
     // copy saved user registers.
     *(np->trapframe) = *(p->trapframe);
 
+    for(int i = 0; i < FD_MAX; ++i)
+        if(p->files[i] != 0 && p->files[i]->type != FD_NONE) {
+            p->files[i]->ref++;
+            np->files[i] = p->files[i];
+        }
+
     // Cause fork to return 0 in the child.
     np->trapframe->a0 = 0;
     pid = np->pid;
@@ -245,4 +258,16 @@ void exit(int code) {
         p->state = ZOMBIE;
     }
     sched();
+}
+
+int fdalloc(struct file* f) {
+    struct proc* p = curr_proc();
+    // fd = 0 is reserved for stdio/stdout
+    for(int i = 1; i < FD_MAX; ++i) {
+        if(p->files[i] == 0) {
+            p->files[i] = f;
+            return i;
+        }
+    }
+    return -1;
 }
