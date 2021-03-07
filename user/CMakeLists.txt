@@ -12,7 +12,7 @@ else()
 endif()
 
 set(ASM_DIR asm)
-set(BIN_DIR target)
+set(BIN_DIR bin)
 
 # Toolchain
 set(PREFIX ${ARCH}-linux-musl-)
@@ -44,12 +44,18 @@ include_directories(include/)
 target_include_directories(ulib PRIVATE ${ARCH_DIR})
 
 # Execuatble
+set(ENTRY "0x80400000")
 aux_source_directory(src SRCS)
 set(EXECUTABLE_OUTPUT_PATH ${ARCH})
 foreach(PATH ${SRCS})
     get_filename_component(NAME ${PATH} NAME_WE)
     add_executable(${NAME} ${PATH})
     target_link_libraries(${NAME} ulib)
+
+if ("${CHAPTER}" STREQUAL 3)
+    target_link_options(${NAME} PRIVATE -e ${ENTRY})
+    math(EXPR ENTRY "${ENTRY}+0x20000")
+endif ()
     add_custom_command(
             TARGET ${NAME}
             POST_BUILD

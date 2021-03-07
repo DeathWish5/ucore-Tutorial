@@ -1,11 +1,6 @@
 #include "defs.h"
 
-extern char stext[];
-extern char etext[];
-extern char srodata[];
-extern char erodata[];
-extern char sdata[];
-extern char edata[];
+extern char ekernel[];
 extern char sbss[];
 extern char ebss[];
 
