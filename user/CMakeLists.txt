@@ -51,11 +51,8 @@ foreach(PATH ${SRCS})
     get_filename_component(NAME ${PATH} NAME_WE)
     add_executable(${NAME} ${PATH})
     target_link_libraries(${NAME} ulib)
-
-if ("${CHAPTER}" STREQUAL 3)
-    target_link_options(${NAME} PRIVATE -e ${ENTRY})
-    math(EXPR ENTRY "${ENTRY}+0x20000")
-endif ()
+    target_link_options(${NAME} PRIVATE -Ttext ${ENTRY})
+    math(EXPR ENTRY "${ENTRY} + 0x20000" OUTPUT_FORMAT HEXADECIMAL)
     add_custom_command(
             TARGET ${NAME}
             POST_BUILD
