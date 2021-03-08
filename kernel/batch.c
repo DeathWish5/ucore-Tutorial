@@ -22,6 +22,7 @@ void batchinit() {
     app_info_ptr = (uint64*) _app_num;
     app_cur = -1;
     app_num = *app_info_ptr;
+    app_info_ptr++;
 }
 
 int load_app(int n, uint64* info) {
@@ -33,7 +34,6 @@ int load_app(int n, uint64* info) {
 
 int run_all_app() {
     for(int i = 0; i < app_num; ++i) {
-        app_info_ptr++;
         struct proc* p = allocproc();
         struct trapframe* trapframe = p->trapframe;
         printf("run app %d\n", i);
@@ -43,4 +43,5 @@ int run_all_app() {
         trapframe->sp = (uint64) p->ustack + PAGE_SIZE;
         p->state = RUNNABLE;
     }
+    return 0;
 }
