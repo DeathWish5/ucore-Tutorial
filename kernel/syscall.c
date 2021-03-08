@@ -28,7 +28,7 @@ void syscall() {
     struct trapframe *trapframe = (struct trapframe *) trap_page;
     int id = trapframe->a7, ret;
     printf("syscall %d\n", id);
-    uint64 args[6] = {trapframe->a0, trapframe->a1, trapframe->a3, trapframe->a4, trapframe->a5, trapframe->a6};
+    uint64 args[6] = {trapframe->a0, trapframe->a1, trapframe->a2, trapframe->a3, trapframe->a4, trapframe->a5};
     switch (id) {
         case SYS_write:
             ret = sys_write(args[0], (char *) args[1], args[2]);
