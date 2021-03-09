@@ -1,17 +1,17 @@
 #include "defs.h"
 
-extern char stext[];
-extern char etext[];
-extern char srodata[];
-extern char erodata[];
-extern char sdata[];
-extern char edata[];
-extern char sbss[];
-extern char ebss[];
+extern char s_text[];
+extern char e_text[];
+extern char s_rodata[];
+extern char e_rodata[];
+extern char s_data[];
+extern char e_data[];
+extern char s_bss[];
+extern char e_bss[];
 
 void clean_bss() {
     char* p;
-    for(p = sbss; p < ebss; ++p)
+    for(p = s_bss; p < e_bss; ++p)
         *p = 0;
 }
 
@@ -19,14 +19,14 @@ void main() {
     clean_bss();
     printf("\n");
     printf("hello wrold!\n");
-    printf("stext: %p\n", stext);
-    printf("etext: %p\n", etext);
-    printf("sroda: %p\n", srodata);
-    printf("eroda: %p\n", erodata);
-    printf("sdata: %p\n", sdata);
-    printf("edata: %p\n", edata);
-    printf("sbss : %p\n", sbss);
-    printf("ebss : %p\n", ebss);
+    printf("stext: %p\n", s_text);
+    printf("etext: %p\n", e_text);
+    printf("sroda: %p\n", s_rodata);
+    printf("eroda: %p\n", e_rodata);
+    printf("sdata: %p\n", s_data);
+    printf("edata: %p\n", e_data);
+    printf("sbss : %p\n", s_bss);
+    printf("ebss : %p\n", e_bss);
     printf("\n");
     shutdown();
 }
