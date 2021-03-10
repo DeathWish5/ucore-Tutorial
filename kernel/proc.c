@@ -7,7 +7,7 @@ struct proc pool[NPROC];
 
 __attribute__ ((aligned (16))) char kstack[NPROC][KSTACK_SIZE];
 
-extern char boot_stack[];
+extern char boot_stack_top[];
 struct proc* current_proc;
 struct proc idle;
 
@@ -24,7 +24,7 @@ procinit(void)
         p->state = UNUSED;
         p->kstack = (uint64) kstack[p - pool];
     }
-    idle.kstack = (uint64)boot_stack;
+    idle.kstack = (uint64)boot_stack_top;
     idle.pid = 0;
     idle.killed = 0;
 }

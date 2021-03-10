@@ -4,7 +4,7 @@
 
 pagetable_t kernel_pagetable;
 
-extern char etext[];     // kernel.ld sets this to end of kernel code.
+extern char e_text[];     // kernel.ld sets this to end of kernel code.
 extern char trampoline[];
 
 // Make a direct-map page table for the kernel.
@@ -13,9 +13,9 @@ pagetable_t kvmmake(void) {
     kpgtbl = (pagetable_t) kalloc();
     memset(kpgtbl, 0, PGSIZE);
     // map kernel text executable and read-only.
-    kvmmap(kpgtbl, KERNBASE, KERNBASE, (uint64) etext - KERNBASE, PTE_R | PTE_X);
+    kvmmap(kpgtbl, KERNBASE, KERNBASE, (uint64) e_text - KERNBASE, PTE_R | PTE_X);
     // map kernel data and the physical RAM we'll make use of.
-    kvmmap(kpgtbl, (uint64) etext, (uint64) etext, PHYSTOP - (uint64) etext, PTE_R | PTE_W);
+    kvmmap(kpgtbl, (uint64) e_text, (uint64) e_text, PHYSTOP - (uint64) e_text, PTE_R | PTE_W);
     kvmmap(kpgtbl, TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
     return kpgtbl;
 }
