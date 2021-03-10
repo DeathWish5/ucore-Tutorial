@@ -2,7 +2,7 @@
 #include "defs.h"
 #include "trap.h"
 
-extern char trampoline[], uservec[], boot_stack[];
+extern char trampoline[], uservec[], boot_stack_top[];
 extern void* userret(uint64);
 
 // set up to take exceptions and traps while in the kernel.
@@ -24,7 +24,7 @@ void usertrap(struct trapframe *trapframe)
     if(cause == UserEnvCall) {
         trapframe->epc += 4;
         syscall();
-        return usertrapret(trapframe, (uint64)boot_stack);
+        return usertrapret(trapframe, (uint64)boot_stack_top);
     }
     switch(cause) {
         case StoreFault:
