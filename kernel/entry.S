@@ -1,7 +1,7 @@
     .section .text
     .globl _entry
 _entry:
-    la sp, boot_stack
+    la sp, boot_stack_top
     call main
 
     .section .bss.stack

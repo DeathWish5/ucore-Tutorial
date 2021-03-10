@@ -3,7 +3,7 @@
 #include "proc.h"
 #include "riscv.h"
 
-extern char trampoline[], uservec[], boot_stack[];
+extern char trampoline[], uservec[];
 extern void* userret(uint64);
 
 // set up to take exceptions and traps while in the kernel.

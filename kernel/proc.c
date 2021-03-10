@@ -7,7 +7,7 @@ char kstack[NPROC][PAGE_SIZE];
 char ustack[NPROC][PAGE_SIZE*4];
 char trapframe[NPROC][PAGE_SIZE];
 
-extern char boot_stack[];
+extern char boot_stack_top[];
 struct proc* current_proc;
 struct proc idle;
 
@@ -26,7 +26,7 @@ procinit(void)
         p->ustack = (uint64)ustack[p - pool];
         p->trapframe = (struct trapframe*)trapframe[p - pool];
     }
-    idle.kstack = (uint64)boot_stack;
+    idle.kstack = (uint64)boot_stack_top;
     idle.pid = 0;
     idle.killed = 0;
 }
