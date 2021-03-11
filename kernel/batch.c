@@ -15,8 +15,8 @@ void batchinit() {
     app_num = *app_info_ptr;
 }
 
-__attribute__ ((aligned (16))) char user_stack[4096];
-__attribute__ ((aligned (16))) char trap_page[4096];
+__attribute__ ((aligned (4096))) char user_stack[4096];
+__attribute__ ((aligned (4096))) char trap_page[4096];
 
 int load_app(uint64* info) {
     uint64 start = info[0], end = info[1], length = end - start;
