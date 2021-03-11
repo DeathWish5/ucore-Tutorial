@@ -4,7 +4,7 @@
 
 struct proc pool[NPROC];
 char kstack[NPROC][PAGE_SIZE];
-char ustack[NPROC][PAGE_SIZE*4];
+__attribute__ ((aligned (4096))) char ustack[NPROC][PAGE_SIZE];
 char trapframe[NPROC][PAGE_SIZE];
 
 extern char boot_stack_top[];
