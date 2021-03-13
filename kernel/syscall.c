@@ -5,13 +5,12 @@
 #define min(a, b) a < b ? a : b;
 
 uint64 sys_write(int fd, char *str, uint len) {
-    if (fd != 0)
+    if (fd != 1)
         return -1;
-    int size = min(strlen(str), len);
-    for(int i = 0; i < size; ++i) {
+    for(int i = 0; i < len; ++i) {
         console_putchar(str[i]);
     }
-    return size;
+    return len;
 }
 
 uint64 sys_exit(int code) {

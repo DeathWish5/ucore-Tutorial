@@ -1,6 +1,6 @@
 import os
 
-TARGET_DIR = "../user/target/"
+TARGET_DIR = "../user/target"
 
 if __name__ == '__main__':
     f = open("link_app.S", mode="w")
