@@ -48,7 +48,7 @@ QEMUOPTS = \
 	-smp $(CPUS) \
 	-machine virt \
 	-bios $(BOOTLOADER) \
-	-device loader,addr=0x80200000,file=kernel
+	-kernel kernel
 
 run: kernel
 	$(QEMU) $(QEMUOPTS)
