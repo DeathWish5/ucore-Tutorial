@@ -26,6 +26,7 @@ _app_names:
 ''');
 
     for app in apps:
+        app = app[:app.find('.')]
         f.write("   .string \"" + app + "\"\n")
 
     for (idx, app) in enumerate(apps):
