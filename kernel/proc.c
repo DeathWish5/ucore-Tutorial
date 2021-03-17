@@ -262,12 +262,16 @@ void exit(int code) {
 
 int fdalloc(struct file* f) {
     struct proc* p = curr_proc();
-    // fd = 0 is reserved for stdio/stdout
-    for(int i = 1; i < FD_MAX; ++i) {
+    // fd = 0,1,2 is reserved for stdio/stdout
+    for(int i = 3; i < FD_MAX; ++i) {
         if(p->files[i] == 0) {
             p->files[i] = f;
             return i;
         }
     }
     return -1;
+}
+
+int cpuid() {
+    return 0;
 }

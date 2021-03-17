@@ -2,6 +2,8 @@
 #include "file.h"
 #include "proc.h"
 #include "defs.h"
+#include "fs.h"
+#include "fcntl.h"
 
 #define FILE_MAX (128*16)
 struct file filepool[FILE_MAX];
@@ -17,7 +19,10 @@ fileclose(struct file *f)
 
     if(f->type == FD_PIPE){
         pipeclose(f->pipe, f->writable);
+    } else if(f->type == FD_INODE) {
+        iput(f->ip);
     }
+
     f->off = 0;
     f->readable = 0;
     f->writable = 0;
@@ -33,4 +38,89 @@ struct file* filealloc() {
         }
     }
     return 0;
+}
+
+extern int PID;
+
+static struct inode *
+create(char *path, short type) {
+    struct inode *ip, *dp;
+    dp = root_dir();
+    ivalid(dp);
+    if ((ip = dirlookup(dp, path, 0)) != 0) {
+        info("create a exist file\n");
+        iput(dp);
+        ivalid(ip);
+        if (type == T_FILE && ip->type == T_FILE)
+            return ip;
+        iput(ip);
+        return 0;
+    }
+    if ((ip = ialloc(dp->dev, type)) == 0)
+        panic("create: ialloc");
+
+    info("create dinod and inode OK\n");
+    
+    ivalid(ip);
+    iupdate(ip);
+    if(dirlink(dp, path, ip->inum) < 0)
+        panic("create: dirlink");
+
+    iput(dp);
+    return ip;
+}
+
+extern int PID;
+
+int fileopen(char *path, uint64 omode) {
+    int fd;
+    struct file *f;
+    struct inode *ip;
+    if (omode & O_CREATE) {
+        ip = create(path, T_FILE);
+        if (ip == 0) {
+            info("create fail\n");
+            return -1;
+        }
+        info("create OK\n");
+    } else {
+        if ((ip = namei(path)) == 0) {
+            return -1;
+        }
+        ivalid(ip);
+    }
+    if (ip->type != T_FILE)
+        panic("unsupported file inode type\n");
+    if ((f = filealloc()) == 0 || (fd = fdalloc(f)) < 0) {
+        if (f)
+            fileclose(f);
+        iunlockput(ip);
+        return -1;
+    }
+    // only support FD_INODE
+    f->type = FD_INODE;
+    f->off = 0;
+    f->ip = ip;
+    f->readable = !(omode & O_WRONLY);
+    f->writable = (omode & O_WRONLY) || (omode & O_RDWR);
+    if ((omode & O_TRUNC) && ip->type == T_FILE) {
+        itrunc(ip);
+    }
+    return fd;
+}
+
+uint64 filewrite(struct file* f, uint64 va, uint64 len) {
+    int r;
+    ivalid(f->ip);
+    if ((r = writei(f->ip, 1, va, f->off, len)) > 0)
+        f->off += r;
+    return r;
+}
+
+uint64 fileread(struct file* f, uint64 va, uint64 len) {
+    int r;
+    ivalid(f->ip);
+    if ((r = readi(f->ip, 1, va, f->off, len)) > 0)
+        f->off += r;
+    return r;
 }

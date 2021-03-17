@@ -5,30 +5,52 @@
 #include "memory_layout.h"
 
 extern char trampoline[], uservec[], userret[];
-
-void trapinit() {
-    intr_on();
-    set_kerneltrap();
-}
-
-void kerneltrap() {
-    if((r_sstatus() & SSTATUS_SPP) == 0)
-        panic("kerneltrap: not from supervisor mode");
-    panic("trap from kernel\n");
-}
+void kernelvec();
 
 // set up to take exceptions and traps while in the kernel.
 void set_usertrap(void) {
-    w_stvec(((uint64) TRAMPOLINE + (uservec - trampoline)) & ~0x3); // DIRECT
+    w_stvec(((uint64) TRAMPOLINE + (uservec - trampoline)) & ~0x3);     // DIRECT
 }
 
 void set_kerneltrap(void) {
-    w_stvec((uint64)kerneltrap & ~0x3); // DIRECT
+    w_stvec((uint64) kernelvec & ~0x3);     // DIRECT
+}
+
+void trapinit() {
+    set_kerneltrap();
+    w_sie(r_sie() | SIE_SEIE | SIE_STIE | SIE_SSIE);
+    intr_on();
 }
 
 void unknown_trap() {
     error("unknown trap: %p, stval = %p sepc = %p\n", r_scause(), r_stval(), r_sepc());
     exit(-1);
+}
+
+void devintr(uint64 cause) {
+    int irq;
+    switch (cause) {
+        case SupervisorTimer:
+            info("time interrupt!\n");
+            set_next_timer();
+            yield();
+            break;
+        case SupervisorExternal:
+            irq = plic_claim();
+            if (irq == UART0_IRQ) {
+                // do nothing
+            } else if (irq == VIRTIO0_IRQ) {
+                virtio_disk_intr();
+            } else if (irq) {
+                info("unexpected interrupt irq=%d\n", irq);
+            }
+            if (irq)
+                plic_complete(irq);
+            break;
+        default:
+            unknown_trap();
+            break;
+    }
 }
 
 //
@@ -38,67 +60,61 @@ void unknown_trap() {
 void usertrap() {
     set_kerneltrap();
     struct trapframe *trapframe = curr_proc()->trapframe;
-
+    trace("usertrap from %p\n", trapframe->epc);
     if ((r_sstatus() & SSTATUS_SPP) != 0)
         panic("usertrap: not from user mode");
 
     uint64 cause = r_scause();
-    if(cause & (1ULL << 63)) {
-        cause &= ~(1ULL << 63);
-        switch(cause) {
-        case SupervisorTimer:
-            info("time interrupt!\n");
-            set_next_timer();
-            yield();
-            break;
-        default:
-            unknown_trap();
-            break;
-        }
+    if (cause & (1ULL << 63)) {
+        devintr(cause & 0xff);
     } else {
-        switch(cause) {
-        case UserEnvCall:
-            trapframe->epc += 4;
-            syscall();
-            break;
-        case StoreFault:
-        case StorePageFault:
-        case InstructionFault:
-        case InstructionPageFault:
-        case LoadFault:
-        case LoadPageFault:
-            error(
-                    "%d in application, bad addr = %p, bad instruction = %p, core dumped.\n",
-                    cause,
-                    r_stval(),
-                    trapframe->epc
-            );
-            exit(-2);
-            break;
-        case IllegalInstruction:
-            error("IllegalInstruction in application, epc = %p, core dumped.\n", trapframe->epc);
-            exit(-3);
-            break;
-        default:
-            unknown_trap();
-            break;
+        switch (cause) {
+            case UserEnvCall:
+                trapframe->epc += 4;
+                syscall();
+                break;
+            case StoreFault:
+            case StorePageFault:
+            case InstructionFault:
+            case InstructionPageFault:
+            case LoadFault:
+            case LoadPageFault:
+                error(
+                        "%d in application, bad addr = %p, bad instruction = %p, core dumped.\n",
+                        cause,
+                        r_stval(),
+                        trapframe->epc);
+                exit(-2);
+                break;
+            case IllegalInstruction:
+                error("IllegalInstruction in application, epc = %p, core dumped.\n", trapframe->epc);
+                exit(-3);
+                break;
+            default:
+                unknown_trap();
+                break;
         }
     }
     usertrapret();
 }
 
+extern int PID;
+
 void usertrapret() {
+    static int first = 1;
+    struct trapframe *trapframe;
+    if (first) {
+        first = 0;
+        fsinit();
+    }
     set_usertrap();
-    struct trapframe *trapframe = curr_proc()->trapframe;
-    trapframe->kernel_satp = r_satp();                   // kernel page table
-    trapframe->kernel_sp = curr_proc()->kstack + PGSIZE;// process's kernel stack
+    trapframe = curr_proc()->trapframe;
+    trapframe->kernel_satp = r_satp();                      // kernel page table
+    trapframe->kernel_sp = curr_proc()->kstack + PGSIZE;    // process's kernel stack
     trapframe->kernel_trap = (uint64) usertrap;
-    trapframe->kernel_hartid = r_tp();// hartid for cpuid()
+    trapframe->kernel_hartid = r_tp();                      // hartid for cpuid()
 
     w_sepc(trapframe->epc);
-    // set up the registers that trampoline.S's sret will use
-    // to get to user space.
-
     // set S Previous Privilege mode to User.
     uint64 x = r_sstatus();
     x &= ~SSTATUS_SPP;// clear SPP to 0 for user mode
@@ -109,5 +125,29 @@ void usertrapret() {
     uint64 satp = MAKE_SATP(curr_proc()->pagetable);
     trace("return to user at %p\n", trapframe->epc);
     uint64 fn = TRAMPOLINE + (userret - trampoline);
-    ((void (*)(uint64,uint64))fn)(TRAPFRAME, satp);
+    ((void (*)(uint64, uint64)) fn)(TRAPFRAME, satp);
+}
+
+// interrupts and exceptions from kernel code go here via kernelvec,
+// on whatever the current kernel stack is.
+void kerneltrap() {
+    uint64 sepc = r_sepc();
+    uint64 sstatus = r_sstatus();
+    uint64 scause = r_scause();
+
+    info("kerneltrap: epc = %p, cause = %p\n", sepc, scause);
+
+    if ((sstatus & SSTATUS_SPP) == 0)
+        panic("kerneltrap: not from supervisor mode");
+
+    if (scause & (1ULL << 63)) {
+        devintr(scause & 0xff);
+    } else {
+        error("invalid trap from kernel: %p, stval = %p sepc = %p\n", scause, r_stval(), sepc);
+        exit(-1);
+    }
+    // the yield() may have caused some traps to occur,
+    // so restore trap registers for use by kernelvec.S's sepc instruction.
+    w_sepc(sepc);
+    w_sstatus(sstatus);
 }

@@ -61,7 +61,7 @@ void bin_loader(uint64 start, uint64 end, struct proc *p) {
         }
         p->sz += PGSIZE;
     }
-    p->trapframe->epc = ustack_top + start - s;
+    p->trapframe->epc = ;
     if((p->trapframe->epc & 3) != 0) {
         panic("invalid user program alignment");
     }
