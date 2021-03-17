@@ -108,11 +108,10 @@ found:
     if(p->pagetable == 0){
         panic("");
     }
-
     memset(&p->context, 0, sizeof(p->context));
     memset((void*)p->kstack, 0, KSTACK_SIZE);
     p->context.ra = (uint64)usertrapret;
-    p->context.sp = p->kstack + PGSIZE;
+    p->context.sp = p->kstack + KSTACK_SIZE;
     return p;
 }
 
@@ -167,12 +166,10 @@ fork(void)
     int pid;
     struct proc *np;
     struct proc *p = curr_proc();
-
     // Allocate process.
     if((np = allocproc()) == 0){
         panic("allocproc\n");
     }
-
     // Copy user memory from parent to child.
     if(uvmcopy(p->pagetable, np->pagetable, p->sz) < 0){
         panic("uvmcopy\n");

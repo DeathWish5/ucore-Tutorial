@@ -43,12 +43,14 @@ uint64 sys_getpid() {
 }
 
 uint64 sys_clone() {
+    info("fork!\n");
     return fork();
 }
 
 uint64 sys_exec(uint64 va) {
     struct proc* p = curr_proc();
-    char* name = (char*)useraddr(p->pagetable, va);
+    char name[200];
+    copyinstr(p->pagetable, name, va, 200);
     info("sys_exec %s\n", name);
     return exec(name);
 }
