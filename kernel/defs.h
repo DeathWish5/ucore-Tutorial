@@ -84,6 +84,7 @@ uint64 useraddr(pagetable_t, uint64);
 void debugwalk(pagetable_t, int);
 int copyin(pagetable_t, char*, uint64, uint64);
 int copyout(pagetable_t, uint64, char*, uint64);
+int copyinstr(pagetable_t, char*, uint64, uint64);
 
 // timer.c
 uint64 get_cycle();

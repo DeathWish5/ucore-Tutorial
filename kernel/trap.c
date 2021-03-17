@@ -47,7 +47,7 @@ void usertrap() {
         cause &= ~(1ULL << 63);
         switch(cause) {
         case SupervisorTimer:
-            info("time interrupt!\n");
+            trace("time interrupt!\n");
             set_next_timer();
             yield();
             break;
