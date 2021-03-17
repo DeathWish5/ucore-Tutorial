@@ -8,8 +8,7 @@
 uint64 console_write(uint64 va, uint64 len) {
     struct proc *p = curr_proc();
     char str[200];
-    int size = MIN(len, 200);
-    copyin(p->pagetable, str, va, size);
+    int size = copyinstr(p->pagetable, str, va, MIN(len, 200));
     for(int i = 0; i < size; ++i) {
         console_putchar(str[i]);
     }
@@ -18,10 +17,12 @@ uint64 console_write(uint64 va, uint64 len) {
 
 uint64 console_read(uint64 va, uint64 len) {
     struct proc *p = curr_proc();
+    char str[200];
     for(int i = 0; i < len; ++i) {
-        char c = console_getchar();
-        copyout(p->pagetable, va, &c, 1);
+        int c = console_getchar();
+        str[i] = c;
     }
+    copyout(p->pagetable, va, str, len);
     return len;
 }
 
