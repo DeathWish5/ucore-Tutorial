@@ -76,7 +76,7 @@ void loader(int id, void* p) {
 int run_all_app() {
     struct proc *p = allocproc();
     p->parent = 0;
-    int id = get_id_by_name("user_shell.bin");
+    int id = get_id_by_name("user_shell");
     if(id < 0)
         panic("no user shell");
     loader(id, p);

@@ -7,8 +7,8 @@ uint64 sys_write(int fd, uint64 va, uint len) {
     if (fd != 0)
         return -1;
     struct proc *p = curr_proc();
-    char* str = (char*)useraddr(p->pagetable, va);
-    int size = MIN(strlen(str), len);
+    char str[200];
+    int size = copyinstr(p->pagetable, str, va, MIN(len, 200));
     for(int i = 0; i < size; ++i) {
         console_putchar(str[i]);
     }
@@ -19,11 +19,12 @@ uint64 sys_read(int fd, uint64 va, uint64 len) {
     if (fd != 0)
         return -1;
     struct proc *p = curr_proc();
-    char* str = (char*)useraddr(p->pagetable, va);
+    char str[200];
     for(int i = 0; i < len; ++i) {
         int c = console_getchar();
         str[i] = c;
     }
+    copyout(p->pagetable, va, str, len);
     return len;
 }
 

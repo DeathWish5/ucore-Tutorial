@@ -3,7 +3,7 @@
 #include <unistd.h>
 
 int main() {
-    puts("execute hello.bin");
-    exec("hello.bin");
+    puts("execute hello");
+    exec("hello");
     return 0;
 }
