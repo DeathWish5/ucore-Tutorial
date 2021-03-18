@@ -105,7 +105,9 @@ void usertrapret() {
     struct trapframe *trapframe;
     if (first) {
         first = 0;
+        info("fsinit\n");
         fsinit();
+        info("fsinit over\n");
     }
     set_usertrap();
     trapframe = curr_proc()->trapframe;

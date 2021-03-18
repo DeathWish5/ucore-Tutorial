@@ -13,12 +13,17 @@ int debug_level = INFO;
 
 void main() {
     clean_bss();
+    debug_level = INFO;
     trapinit();
+    plicinit();
     kinit();
     procinit();
     kvminit();
     batchinit();
     timerinit();
+    plicinit();
+    binit();
+    virtio_disk_init();
     run_all_app();
     info("start scheduler!\n");
     scheduler();
