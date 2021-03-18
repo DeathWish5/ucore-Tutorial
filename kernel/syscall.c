@@ -101,8 +101,14 @@ uint64 sys_clone() {
 }
 
 uint64 sys_exec(uint64 va) {
+<<<<<<< HEAD
     struct proc *p = curr_proc();
     char *name = (char *) useraddr(p->pagetable, va);
+=======
+    struct proc* p = curr_proc();
+    char name[200];
+    copyinstr(p->pagetable, name, va, 200);
+>>>>>>> ch6
     info("sys_exec %s\n", name);
     return exec(name);
 }
@@ -139,8 +145,8 @@ void syscall() {
     struct proc *p = curr_proc();
     struct trapframe *trapframe = p->trapframe;
     int id = trapframe->a7, ret;
-    uint64 args[6] = {trapframe->a0, trapframe->a1, trapframe->a2, trapframe->a3, trapframe->a4, trapframe->a5};
-    trace("syscall %d args:%p %p %p %p %p %p\n", id, args[0], args[1], args[2], args[3], args[4], args[5]);
+    uint64 args[7] = {trapframe->a0, trapframe->a1, trapframe->a2, trapframe->a3, trapframe->a4, trapframe->a5, trapframe->a6};
+    trace("syscall %d args:%p %p %p %p %p %p %p\n", id, args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
     switch (id) {
         case SYS_write:
             ret = sys_write(args[0], args[1], args[2]);
