@@ -18,7 +18,7 @@ uint64 console_write(uint64 va, uint64 len) {
 uint64 console_read(uint64 va, uint64 len) {
     struct proc *p = curr_proc();
     char str[200];
-    for(int i = 0; i < len; ++i) {
+    for(int i = 0; i < MIN(len, 200); ++i) {
         int c = console_getchar();
         str[i] = c;
     }
@@ -28,7 +28,7 @@ uint64 console_read(uint64 va, uint64 len) {
 
 uint64 sys_write(int fd, uint64 va, uint64 len) {
     if (fd == 0) {
-        return console_write(va);
+        return console_write(va, len);
     }
     struct proc *p = curr_proc();
     struct file *f = p->files[fd];
@@ -101,14 +101,9 @@ uint64 sys_clone() {
 }
 
 uint64 sys_exec(uint64 va) {
-<<<<<<< HEAD
-    struct proc *p = curr_proc();
-    char *name = (char *) useraddr(p->pagetable, va);
-=======
     struct proc* p = curr_proc();
     char name[200];
     copyinstr(p->pagetable, name, va, 200);
->>>>>>> ch6
     info("sys_exec %s\n", name);
     return exec(name);
 }
@@ -133,10 +128,10 @@ uint64 sys_close(int fd) {
     return 0;
 }
 
-uint64 sys_openat(uint64 va, uint64 omode) {
+uint64 sys_openat(uint64 va, uint64 omode, uint64 _flags) {
     struct proc *p = curr_proc();
     char path[200];
-    copyin_str(p->pagetable, va, path, 200);
+    copyinstr(p->pagetable, path, va, 200);
     info("sysopen: %s\n", path);
     return fileopen(path, omode);
 }
@@ -155,7 +150,7 @@ void syscall() {
             ret = sys_read(args[0], args[1], args[2]);
             break;
         case SYS_openat:
-            ret = sys_openat(args[0], args[1]);
+            ret = sys_openat(args[0], args[1], args[2]);
             break;
         case SYS_close:
             ret = sys_close(args[0]);

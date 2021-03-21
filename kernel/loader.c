@@ -59,21 +59,9 @@ void bin_loader(uint64 start, uint64 end, struct proc *p) {
         if(page == 0) {
             panic("");
         }
-<<<<<<< HEAD
-        memmove(page, (const void*)cur, PGSIZE);
-        if (mappages(p->pagetable, p->sz, PGSIZE, (uint64)page, PTE_U | PTE_R | PTE_W | PTE_X) != 0) {
-            panic("mappages\n");
-        }
-        p->sz += PGSIZE;
-    }
-    p->trapframe->epc = ;
-    if((p->trapframe->epc & 3) != 0) {
-        panic("invalid user program alignment");
-=======
         memmove(page, (const void*)pa, PGSIZE);
         if (mappages(p->pagetable, va, PGSIZE, (uint64)page, PTE_U | PTE_R | PTE_W | PTE_X) != 0)
             panic("");
->>>>>>> ch6
     }
 
     p->trapframe->epc = BASE_ADDRESS;

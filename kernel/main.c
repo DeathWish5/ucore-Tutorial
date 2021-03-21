@@ -20,7 +20,7 @@ void main() {
     procinit();
     kvminit();
     batchinit();
-    timerinit();
+    // timerinit();
     plicinit();
     binit();
     virtio_disk_init();

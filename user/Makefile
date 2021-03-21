@@ -1,4 +1,4 @@
-.DEFAULT_GOAL := bin
+.DEFAULT_GOAL := fs.img
 
 ARCH ?= riscv64
 MODE ?= release
@@ -23,6 +23,9 @@ bin: elf
 	@$(CP) build/asm/* asm
 	@mkdir -p $(out_dir)
 	@$(CP) build/target/* target
+
+fs.img: bin ../nfs/fs
+	../nfs/fs fs.img $(wildcard $(out_dir)/*.bin)
 
 clean:
 	@rm -rf build target asm

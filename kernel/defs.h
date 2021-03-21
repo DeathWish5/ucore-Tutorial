@@ -66,6 +66,7 @@ int exec(char *);
 int wait(int, int *);
 struct proc *allocproc();
 int fdalloc(struct file *);
+int cpuid();
 
 // kalloc.c
 void *kalloc(void);
@@ -89,6 +90,8 @@ void debugwalk(pagetable_t, int);
 int copyin(pagetable_t, char*, uint64, uint64);
 int copyout(pagetable_t, uint64, char*, uint64);
 int copyinstr(pagetable_t, char*, uint64, uint64);
+int either_copyout(int user_dst, uint64 dst, char* src, uint64 len);
+int either_copyin(int user_src, uint64 src, char* dst, uint64 len);
 
 // timer.c
 uint64 get_cycle();

@@ -234,7 +234,7 @@ virtio_disk_rw(struct buf *b, int write)
     disk.desc[idx[1]].flags |= VRING_DESC_F_NEXT;
     disk.desc[idx[1]].next = idx[2];
 
-    disk.info[idx[0]].status = 0xff; // device writes 0 on success
+    disk.info[idx[0]].status = 0xfb; // device writes 0 on success
     disk.desc[idx[2]].addr = (uint64) &disk.info[idx[0]].status;
     disk.desc[idx[2]].len = 1;
     disk.desc[idx[2]].flags = VRING_DESC_F_WRITE; // device writes the status
@@ -257,14 +257,13 @@ virtio_disk_rw(struct buf *b, int write)
     *R(VIRTIO_MMIO_QUEUE_NOTIFY) = 0; // value is queue number
 
     // Wait for virtio_disk_intr() to say request has finished.
+    info("wait for intr\n");
     while(b->disk == 1) {
-        if(intr_get() == 0) {
-            error("what the fuck!\n");
-            intr_on();
-        }
-        info("QAQ__");
-        // yield();
+        info("QAQ %d\n", b->blockno);
+        intr_on();
     }
+    intr_off();
+    info("wait intr over\n");
     disk.info[idx[0]].b = 0;
     free_chain(idx[0]);
 }
@@ -294,7 +293,7 @@ virtio_disk_intr()
 
         struct buf *b = disk.info[id].b;
         b->disk = 0;   // disk is done with buf
-        info("disk ready!\n");
+        info("disk ready! %d!\n", b->blockno);
         disk.used_idx += 1;
     }
 }

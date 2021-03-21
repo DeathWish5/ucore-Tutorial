@@ -1,3 +1,5 @@
+U = ../user
+
 SRCS = $(wildcard *.S *.c)
 OBJS = $(addsuffix .o, $(basename $(SRCS))) link_app.o
 
@@ -8,7 +10,9 @@ AS = $(TOOLPREFIX)gas
 LD = $(TOOLPREFIX)ld
 OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
+GDB = $(TOOLPREFIX)gdb
 PY = python3
+CP = cp
 
 CFLAGS = -Wall -Werror -O -fno-omit-frame-pointer -ggdb
 CFLAGS += -MD
@@ -56,17 +60,20 @@ QEMUOPTS = \
 	-smp $(CPUS) \
 	-machine virt \
 	-bios $(BOOTLOADER) \
-	-kernel kernel
+	-kernel kernel	\
+	-drive file=$(U)/fs-copy.img,if=none,format=raw,id=x0 \
+    -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
 
 run: kernel
+	$(CP) $(U)/fs.img $(U)/fs-copy.img
 	$(QEMU) $(QEMUOPTS)
 
 # QEMU's gdb stub command line changed in 0.11
 QEMUGDB = $(shell if $(QEMU) -help | grep -q '^-gdb'; \
-	then echo "-gdb tcp::$(GDBPORT)"; \
-	else echo "-s -p $(GDBPORT)"; fi)
+	then echo "-gdb tcp::1234"; \
+	else echo "-s -p 1234"; fi)
 
-debug: $K/kernel .gdbinit
+debug: kernel .gdbinit
 	$(QEMU) $(QEMUOPTS) -S $(QEMUGDB) &
 	sleep 1
 	$(GDB)

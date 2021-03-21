@@ -46,6 +46,7 @@ static struct inode *
 create(char *path, short type) {
     struct inode *ip, *dp;
     dp = root_dir();
+    info("create file %s type = %d\n", path, type);
     ivalid(dp);
     if ((ip = dirlookup(dp, path, 0)) != 0) {
         info("create a exist file\n");
@@ -59,7 +60,7 @@ create(char *path, short type) {
     if ((ip = ialloc(dp->dev, type)) == 0)
         panic("create: ialloc");
 
-    info("create dinod and inode OK\n");
+    info("create dinod and inode type = %d\n", type);
     
     ivalid(ip);
     iupdate(ip);
@@ -76,7 +77,9 @@ int fileopen(char *path, uint64 omode) {
     int fd;
     struct file *f;
     struct inode *ip;
+    info("open %s\n", path);
     if (omode & O_CREATE) {
+        info("try to create %s\n", path);
         ip = create(path, T_FILE);
         if (ip == 0) {
             info("create fail\n");
@@ -94,7 +97,7 @@ int fileopen(char *path, uint64 omode) {
     if ((f = filealloc()) == 0 || (fd = fdalloc(f)) < 0) {
         if (f)
             fileclose(f);
-        iunlockput(ip);
+        iput(ip);
         return -1;
     }
     // only support FD_INODE

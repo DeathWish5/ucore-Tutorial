@@ -27,13 +27,15 @@ void unknown_trap() {
     exit(-1);
 }
 
-void devintr(uint64 cause) {
+void devintr(uint64 cause, int ker) {
     int irq;
     switch (cause) {
         case SupervisorTimer:
-            info("time interrupt!\n");
+            trace("time interrupt!\n");
             set_next_timer();
-            yield();
+            if(ker == 0) {
+                yield();
+            }
             break;
         case SupervisorExternal:
             irq = plic_claim();
@@ -66,7 +68,7 @@ void usertrap() {
 
     uint64 cause = r_scause();
     if (cause & (1ULL << 63)) {
-        devintr(cause & 0xff);
+        devintr(cause & 0xff, 0);
     } else {
         switch (cause) {
             case UserEnvCall:
@@ -132,6 +134,7 @@ void usertrapret() {
 
 // interrupts and exceptions from kernel code go here via kernelvec,
 // on whatever the current kernel stack is.
+
 void kerneltrap() {
     uint64 sepc = r_sepc();
     uint64 sstatus = r_sstatus();
@@ -143,7 +146,7 @@ void kerneltrap() {
         panic("kerneltrap: not from supervisor mode");
 
     if (scause & (1ULL << 63)) {
-        devintr(scause & 0xff);
+        devintr(scause & 0xff, 1);
     } else {
         error("invalid trap from kernel: %p, stval = %p sepc = %p\n", scause, r_stval(), sepc);
         exit(-1);
@@ -152,4 +155,5 @@ void kerneltrap() {
     // so restore trap registers for use by kernelvec.S's sepc instruction.
     w_sepc(sepc);
     w_sstatus(sstatus);
+    info("kernel intr over\n");
 }

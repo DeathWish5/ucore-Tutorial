@@ -1,6 +1,7 @@
 #include "defs.h"
 #include "memory_layout.h"
 #include "riscv.h"
+#include "proc.h"
 
 pagetable_t kernel_pagetable;
 
@@ -12,6 +13,12 @@ pagetable_t kvmmake(void) {
     pagetable_t kpgtbl;
     kpgtbl = (pagetable_t) kalloc();
     memset(kpgtbl, 0, PGSIZE);
+    // uart registers
+    // kvmmap(kpgtbl, UART0, UART0, PGSIZE, PTE_R | PTE_W);
+    // virtio mmio disk interface
+    kvmmap(kpgtbl, VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
+    // PLIC
+    kvmmap(kpgtbl, PLIC, PLIC, 0x400000, PTE_R | PTE_W);
     // map kernel text executable and read-only.
     kvmmap(kpgtbl, KERNBASE, KERNBASE, (uint64) e_text - KERNBASE, PTE_R | PTE_X);
     // map kernel data and the physical RAM we'll make use of.
@@ -369,7 +376,7 @@ int copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max) {
 // Copy to either a user address, or kernel address,
 // depending on usr_dst.
 // Returns 0 on success, -1 on error.
-int either_copyout(int user_dst, uint64 dst, const char *src, uint64 len) {
+int either_copyout(int user_dst, uint64 dst, char *src, uint64 len) {
     struct proc *p = curr_proc();
     if (user_dst) {
         return copyout(p->pagetable, dst, src, len);

@@ -1,5 +1,5 @@
 #include "types.h"
-#include "memlayout.h"
+#include "memory_layout.h"
 #include "riscv.h"
 #include "defs.h"
 
