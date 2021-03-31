@@ -204,13 +204,11 @@ void balloc(int used) {
     uchar buf[BSIZE];
     int i;
 
-    printf("balloc: first %d blocks have been allocated\n", used);
     assert(used < BSIZE * 8);
     bzero(buf, BSIZE);
     for (i = 0; i < used; i++) {
         buf[i / 8] = buf[i / 8] | (0x1 << (i % 8));
     }
-    printf("balloc: write bitmap block at sector %d\n", sb.bmapstart);
     wsect(sb.bmapstart, buf);
 }
 
@@ -226,11 +224,8 @@ void iappend(uint inum, void *xp, int n) {
 
     rinode(inum, &din);
     off = xint(din.size);
-    // printf("append inum %d at off %d sz %d\n", inum, off, n);
     while (n > 0) {
         fbn = off / BSIZE;
-        if(inum == 1)
-            printf("ino off = %d fbn = %d\n", off, fbn);
         assert(fbn < MAXFILE);
         if (fbn < NDIRECT) {
             if (xint(din.addrs[fbn]) == 0) {

@@ -17,7 +17,6 @@ struct {
 void
 kinit()
 {
-    printf("ekernel = %p\n", (void*)ekernel);
     freerange(ekernel, (void*)PHYSTOP);
 }
 
