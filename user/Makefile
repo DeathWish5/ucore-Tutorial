@@ -28,4 +28,4 @@ fs.img: bin ../nfs/fs
 	../nfs/fs fs.img $(wildcard $(out_dir)/*.bin)
 
 clean:
-	@rm -rf build target asm *.img
+	@rm -rf build target asm *.img ../nfs/fs
