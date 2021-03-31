@@ -23,6 +23,6 @@ int main() {
         exit(0);
     }
     wait(-1, &exit_code);
-    puts("filetest passed.\n");
+    puts("filetest passed.");
     return 0;
 }

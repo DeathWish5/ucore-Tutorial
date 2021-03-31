@@ -48,10 +48,10 @@ enum {
     StoreFault,
     UserEnvCall,
     SupervisorEnvCall,
-    MachineEnvCall,
+    MachineEnvCall = 11,
     InstructionPageFault,
     LoadPageFault,
-    StorePageFault,
+    StorePageFault = 15,
 };
 
 enum Interrupt {

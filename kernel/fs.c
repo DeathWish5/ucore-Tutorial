@@ -29,50 +29,13 @@ readsb(int dev, struct superblock *sb) {
     brelse(bp);
 }
 
-void show_sector(uchar* buf, int sec) {
-    for(int i = 0; i < 64; ++i) {
-        printf("%x: ", 0x10 * i + sec*0x400);
-        for(int j = 0; j < 16; ++j) {
-            uchar c = buf[16* i + j];
-            printf("%x%x ", c >> 4, c & 0xF);
-        }
-        printf("\n");
-    }
-}
-
-void disk_test() {
-    struct buf *bp;
-    for(int i = 0; i < 64; ++i) {
-        bp = bread(ROOTDEV, i);
-        printf("sector %d:\n", i);\
-        show_sector(bp->data, i);
-        brelse(bp);
-    }
-    for(int i = 0; i < 64; ++i) {
-        bp = bread(ROOTDEV, i);
-        for(int j = 0; j < 1024; ++j)
-            bp->data[j] = j % 256;
-        bwrite(bp);
-        brelse(bp);
-    }
-    for(int i = 0; i < 64; ++i) {
-        bp = bread(ROOTDEV, i);
-        printf("sector %d:\n", i);\
-        show_sector(bp->data, i);
-        brelse(bp);
-    }
-    panic("desk test over\n");
-}
-
 // Init fs
 void fsinit() {
     int dev = ROOTDEV;
     readsb(dev, &sb);
     if (sb.magic != FSMAGIC) {
-        error("sb.magic = %x\n", sb.magic);
         panic("invalid file system");
     }
-    // disk_test();
 }
 
 // Zero a block.
@@ -90,7 +53,6 @@ bzero(int dev, int bno) {
 // Allocate a zeroed disk block.
 static uint
 balloc(uint dev) {
-    info("balloc\n");
     int b, bi, m;
     struct buf *bp;
 
@@ -116,7 +78,6 @@ balloc(uint dev) {
 // Free a disk block.
 static void
 bfree(int dev, uint b) {
-    info("bfree\n");
     struct buf *bp;
     int bi, m;
 
@@ -141,7 +102,6 @@ static struct inode *iget(uint dev, uint inum);
 // Returns an allocated and referenced inode.
 struct inode *
 ialloc(uint dev, short type) {
-    info("ialloc\n");
     int inum;
     struct buf *bp;
     struct dinode *dip;
@@ -166,7 +126,6 @@ ialloc(uint dev, short type) {
 // Must be called after every change to an ip->xxx field
 // that lives on disk.
 void iupdate(struct inode *ip) {
-    info("iupdate\n");
     struct buf *bp;
     struct dinode *dip;
 
@@ -184,14 +143,12 @@ void iupdate(struct inode *ip) {
 // it from disk.
 static struct inode *
 iget(uint dev, uint inum) {
-    info("iget dev = inum = %d\n", dev, inum);
     struct inode *ip, *empty;
     // Is the inode already in the table?
     empty = 0;
     for (ip = &itable.inode[0]; ip < &itable.inode[NINODE]; ip++) {
         if (ip->ref > 0 && ip->dev == dev && ip->inum == inum) {
             ip->ref++;
-            warn("iget found inum = %d\n", inum);
             return ip;
         }
         if (empty == 0 && ip->ref == 0)// Remember empty slot.
@@ -207,7 +164,6 @@ iget(uint dev, uint inum) {
     ip->inum = inum;
     ip->ref = 1;
     ip->valid = 0;
-    warn("iget new inum = %d\n", inum);
     return ip;
 }
 
@@ -221,21 +177,16 @@ idup(struct inode *ip) {
 
 // Reads the inode from disk if necessary.
 void ivalid(struct inode *ip) {
-    printf("size = %d\n", sizeof(struct dinode));
     struct buf *bp;
     struct dinode *dip;
     if (ip->valid == 0) {
-        info("ivaild %d\n", ip->inum);
         bp = bread(ip->dev, IBLOCK(ip->inum, sb));
-        for(int i = 0; i < 1024; i += 8)
-            printf("[%d] %p\n", i / 64, *(uint64*)&bp->data[i]);
         dip = (struct dinode *) bp->data + ip->inum % IPB;
         ip->type = dip->type;
         ip->size = dip->size;
         memmove(ip->addrs, dip->addrs, sizeof(ip->addrs));
         brelse(bp);
         ip->valid = 1;
-        printf("ip = (%d, %d, %d, %d, %d, %d)\n", ip->dev, ip->inum, ip->ref, ip->size, ip->type, ip->addrs[0]);
         if (ip->type == 0)
             panic("ivalid: no type");
     }
@@ -249,8 +200,7 @@ void ivalid(struct inode *ip) {
 // All calls to iput() must be inside a transaction in
 // case it has to free the inode.
 void iput(struct inode *ip) {
-    info("ivaild %d\n", ip->inum);
-    if (ip->ref == 1 && ip->valid /*&& ip->nlink == 0*/) {
+    if (ip->ref == 1 && ip->valid && 0/*&& ip->nlink == 0*/) {
         // inode has no links and no other references: truncate and free.
         itrunc(ip);
         ip->type = 0;
@@ -401,14 +351,11 @@ dirlookup(struct inode *dp, char *name, uint *poff) {
     if (dp->type != T_DIR)
         panic("dirlookup not DIR");
 
-    warn("dirlookup root.size = %d name = %s\n", dp->size, name);
-
     for (off = 0; off < dp->size; off += sizeof(de)) {
         if (readi(dp, 0, (uint64) &de, off, sizeof(de)) != sizeof(de))
             panic("dirlookup read");
         if (de.inum == 0)
             continue;
-        printf("dir name = %s\n", de.name);
         if (strncmp(name, de.name, DIRSIZ) == 0) {
             // entry matches path element
             if (poff)
@@ -428,7 +375,6 @@ dirlink(struct inode *dp, char *name, uint inum)
   int off;
   struct dirent de;
   struct inode *ip;
-  warn("dirlink name = %s dp.inum = %d\n", name, dp->inum);
   // Check that name is not present.
   if((ip = dirlookup(dp, name, 0)) != 0){
     iput(ip);
@@ -442,12 +388,10 @@ dirlink(struct inode *dp, char *name, uint inum)
     if(de.inum == 0)
       break;
   }
-  warn("find empty slot = %d\n", off / sizeof(de));
   strncpy(de.name, name, DIRSIZ);
   de.inum = inum;
   if(writei(dp, 0, (uint64)&de, off, sizeof(de)) != sizeof(de))
     panic("dirlink");
-  warn("write over");
   return 0;
 }
 

@@ -43,7 +43,7 @@ kernel: $(OBJS) kernel_app.ld link_app.S
 	$(OBJDUMP) -t kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > kernel.sym
 
 clean: 
-	rm -f *.o *.d kernel *.sym *.asm link_app.S kernel_app.ld
+	rm -f *.o *.d kernel *.sym *.asm link_app.S kernel_app.ld *.log
 
 ifndef CPUS
 CPUS := 1

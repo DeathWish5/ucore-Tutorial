@@ -16,7 +16,7 @@ CP := cp
 
 elf:
 	@mkdir -p build
-	@cd build && cmake $(cmake_build_args) .. && make -j
+	@cd build && cmake $(cmake_build_args) .. && make -j`proc`
 
 bin: elf
 	@mkdir -p asm
@@ -28,4 +28,4 @@ fs.img: bin ../nfs/fs
 	../nfs/fs fs.img $(wildcard $(out_dir)/*.bin)
 
 clean:
-	@rm -rf build target asm
+	@rm -rf build target asm *.img

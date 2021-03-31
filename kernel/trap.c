@@ -10,16 +10,17 @@ void kernelvec();
 // set up to take exceptions and traps while in the kernel.
 void set_usertrap(void) {
     w_stvec(((uint64) TRAMPOLINE + (uservec - trampoline)) & ~0x3);     // DIRECT
+    intr_off();
 }
 
 void set_kerneltrap(void) {
     w_stvec((uint64) kernelvec & ~0x3);     // DIRECT
+    intr_on();
 }
 
 void trapinit() {
     set_kerneltrap();
     w_sie(r_sie() | SIE_SEIE | SIE_STIE | SIE_SSIE);
-    intr_on();
 }
 
 void unknown_trap() {
@@ -27,13 +28,13 @@ void unknown_trap() {
     exit(-1);
 }
 
-void devintr(uint64 cause, int ker) {
+void devintr(uint64 cause) {
     int irq;
     switch (cause) {
         case SupervisorTimer:
-            trace("time interrupt!\n");
             set_next_timer();
-            if(ker == 0) {
+            // if form user, allow yield
+            if((r_sstatus() & SSTATUS_SPP) == 0) {
                 yield();
             }
             break;
@@ -68,7 +69,7 @@ void usertrap() {
 
     uint64 cause = r_scause();
     if (cause & (1ULL << 63)) {
-        devintr(cause & 0xff, 0);
+        devintr(cause & 0xff);
     } else {
         switch (cause) {
             case UserEnvCall:
@@ -103,14 +104,7 @@ void usertrap() {
 extern int PID;
 
 void usertrapret() {
-    static int first = 1;
     struct trapframe *trapframe;
-    if (first) {
-        first = 0;
-        info("fsinit\n");
-        fsinit();
-        info("fsinit over\n");
-    }
     set_usertrap();
     trapframe = curr_proc()->trapframe;
     trapframe->kernel_satp = r_satp();                      // kernel page table
@@ -140,13 +134,12 @@ void kerneltrap() {
     uint64 sstatus = r_sstatus();
     uint64 scause = r_scause();
 
-    info("kerneltrap: epc = %p, cause = %p\n", sepc, scause);
 
     if ((sstatus & SSTATUS_SPP) == 0)
         panic("kerneltrap: not from supervisor mode");
 
     if (scause & (1ULL << 63)) {
-        devintr(scause & 0xff, 1);
+        devintr(scause & 0xff);
     } else {
         error("invalid trap from kernel: %p, stval = %p sepc = %p\n", scause, r_stval(), sepc);
         exit(-1);
@@ -155,5 +148,4 @@ void kerneltrap() {
     // so restore trap registers for use by kernelvec.S's sepc instruction.
     w_sepc(sepc);
     w_sstatus(sstatus);
-    info("kernel intr over\n");
 }

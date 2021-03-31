@@ -104,7 +104,6 @@ uint64 sys_exec(uint64 va) {
     struct proc* p = curr_proc();
     char name[200];
     copyinstr(p->pagetable, name, va, 200);
-    info("sys_exec %s\n", name);
     return exec(name);
 }
 
@@ -132,7 +131,6 @@ uint64 sys_openat(uint64 va, uint64 omode, uint64 _flags) {
     struct proc *p = curr_proc();
     char path[200];
     copyinstr(p->pagetable, path, va, 200);
-    info("sysopen: %s\n", path);
     return fileopen(path, omode);
 }
 

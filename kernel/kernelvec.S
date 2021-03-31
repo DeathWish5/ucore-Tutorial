@@ -10,22 +10,13 @@
 kernelvec:
         // make room to save registers.
         addi sp, sp, -256
-        sd t0, 32(sp)
-        sd t1, 40(sp)
-
-        // intr_off()
-        csrr t0, sstatus
-        addi t1, x0, 2
-        not t1, t1
-        and t0, t0, t1
-        csrw sstatus, t0
-
         // save the registers.
         sd ra, 0(sp)
         sd sp, 8(sp)
         sd gp, 16(sp)
         sd tp, 24(sp)
-        // t0, t1 has been saved
+        sd t0, 32(sp)
+        sd t1, 40(sp)
         sd t2, 48(sp)
         sd s0, 56(sp)
         sd s1, 64(sp)
@@ -61,7 +52,7 @@ kernelret:
         ld sp, 8(sp)
         ld gp, 16(sp)
         // not this, in case we moved CPUs: ld tp, 24(sp)
-        // t0 will be restored later
+        ld t0, 32(sp)
         ld t1, 40(sp)
         ld t2, 48(sp)
         ld s0, 56(sp)
@@ -88,14 +79,6 @@ kernelret:
         ld t4, 224(sp)
         ld t5, 232(sp)
         ld t6, 240(sp)
-
-        // intr_on()
-        csrr t0, sstatus
-        ori t0, t0, 2
-        csrw sstatus, t0
-
-        // restore t0
-        ld t0, 32(sp)
 
         addi sp, sp, 256
 

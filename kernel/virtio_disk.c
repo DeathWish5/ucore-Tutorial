@@ -257,13 +257,12 @@ virtio_disk_rw(struct buf *b, int write)
     *R(VIRTIO_MMIO_QUEUE_NOTIFY) = 0; // value is queue number
 
     // Wait for virtio_disk_intr() to say request has finished.
-    info("wait for intr\n");
-    while(b->disk == 1) {
-        info("QAQ %d\n", b->blockno);
-        intr_on();
+    struct buf volatile * _b = b;   // Make sure complier will load 'b' form memory
+    while(_b->disk == 1) {
+        // WARN: No kernel concurrent support, DO NOT allow kernel yield
+        // yield();
     }
-    intr_off();
-    info("wait intr over\n");
+    // info("wait for intr over = %d\n", intr_get());
     disk.info[idx[0]].b = 0;
     free_chain(idx[0]);
 }
@@ -293,7 +292,6 @@ virtio_disk_intr()
 
         struct buf *b = disk.info[id].b;
         b->disk = 0;   // disk is done with buf
-        info("disk ready! %d!\n", b->blockno);
         disk.used_idx += 1;
     }
 }
