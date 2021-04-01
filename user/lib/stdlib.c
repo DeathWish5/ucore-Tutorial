@@ -1,6 +1,6 @@
 #include <stddef.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 static uint64 seed;
@@ -19,8 +19,8 @@ void panic(char* m) {
     exit(-100);
 }
 
-void assert(int f, int code) {
-    if(!f) {
-        exit(code);
+void assert(int f) {
+    if (!f) {
+        exit(-1);
     }
 }

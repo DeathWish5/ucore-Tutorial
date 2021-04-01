@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
+#include <unistd.h>
 
 char STR[] = "hello pipe!";
 
@@ -9,7 +9,7 @@ int main() {
     // create pipe
     uint64 pipe_fd[2];
     int ret = pipe((void*)&pipe_fd);
-    assert(ret == 0, -2);
+    assert(ret == 0);
     printf("[parent] read end = %p, write end = %p\n", pipe_fd[0], pipe_fd[1]);
     if (fork() == 0) {
         // child process, read from parent
@@ -21,7 +21,7 @@ int main() {
         puts("[chile] read over");
         // assert(len_read < 32);
         buffer[len_read] = 0;
-        assert(strncmp(buffer, STR, strlen(STR)) == 0, -3);
+        assert(strncmp(buffer, STR, strlen(STR)) == 0);
         puts("Read OK, child process exited!");
         return 0;
     } else {
@@ -29,15 +29,14 @@ int main() {
         // close read end
         close(pipe_fd[0]);
         printf("[parent] close read end\n");
-        assert(write(pipe_fd[1], STR, strlen(STR)) == strlen(STR), -3);
+        assert(write(pipe_fd[1], STR, strlen(STR)) == strlen(STR));
         printf("[parent] write over\n");
         // close write end
         close(pipe_fd[1]);
         int exit_code = 0;
         wait(-1, &exit_code);
-        assert(exit_code == 0, -2);
+        assert(exit_code == 0);
         puts("pipetest passed!");
     }
     return 0;
 }
-

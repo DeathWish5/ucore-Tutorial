@@ -1,11 +1,11 @@
 #include "defs.h"
 
 void loop() {
-    for(;;);
+    for (;;)
+        ;
 }
 
-void panic(char *s)
-{
+void panic(char* s) {
     error("panic: %s", s);
     shutdown();
 }

@@ -1,24 +1,24 @@
 #include "defs.h"
 #include "fcntl.h"
+#include "fs.h"
 #include "proc.h"
 #include "syscall_ids.h"
 #include "trap.h"
-#include "fs.h"
 
 uint64 console_write(uint64 va, uint64 len) {
-    struct proc *p = curr_proc();
+    struct proc* p = curr_proc();
     char str[200];
     int size = copyinstr(p->pagetable, str, va, MIN(len, 200));
-    for(int i = 0; i < size; ++i) {
+    for (int i = 0; i < size; ++i) {
         console_putchar(str[i]);
     }
     return size;
 }
 
 uint64 console_read(uint64 va, uint64 len) {
-    struct proc *p = curr_proc();
+    struct proc* p = curr_proc();
     char str[200];
-    for(int i = 0; i < MIN(len, 200); ++i) {
+    for (int i = 0; i < MIN(len, 200); ++i) {
         int c = console_getchar();
         str[i] = c;
     }
@@ -30,8 +30,8 @@ uint64 sys_write(int fd, uint64 va, uint64 len) {
     if (fd == 0) {
         return console_write(va, len);
     }
-    struct proc *p = curr_proc();
-    struct file *f = p->files[fd];
+    struct proc* p = curr_proc();
+    struct file* f = p->files[fd];
     if (f->type == FD_PIPE) {
         return pipewrite(f->pipe, va, len);
     } else if (f->type == FD_INODE) {
@@ -45,8 +45,8 @@ uint64 sys_read(int fd, uint64 va, uint64 len) {
     if (fd == 0) {
         return console_read(va, len);
     }
-    struct proc *p = curr_proc();
-    struct file *f = p->files[fd];
+    struct proc* p = curr_proc();
+    struct file* f = p->files[fd];
     if (f->type == FD_PIPE) {
         return piperead(f->pipe, va, len);
     } else if (f->type == FD_INODE) {
@@ -56,10 +56,9 @@ uint64 sys_read(int fd, uint64 va, uint64 len) {
     return -1;
 }
 
-uint64
-sys_pipe(uint64 fdarray) {
+uint64 sys_pipe(uint64 fdarray) {
     info("init pipe\n");
-    struct proc *p = curr_proc();
+    struct proc* p = curr_proc();
     uint64 fd0, fd1;
     struct file *f0, *f1;
     if (f0 < 0 || f1 < 0) {
@@ -71,8 +70,9 @@ sys_pipe(uint64 fdarray) {
         return -1;
     fd0 = fdalloc(f0);
     fd1 = fdalloc(f1);
-    if (copyout(p->pagetable, fdarray, (char *) &fd0, sizeof(fd0)) < 0 ||
-        copyout(p->pagetable, fdarray + sizeof(uint64), (char *) &fd1, sizeof(fd1)) < 0) {
+    if (copyout(p->pagetable, fdarray, (char*)&fd0, sizeof(fd0)) < 0 ||
+        copyout(p->pagetable, fdarray + sizeof(uint64), (char*)&fd1,
+                sizeof(fd1)) < 0) {
         fileclose(f0);
         fileclose(f1);
         p->files[fd0] = 0;
@@ -104,12 +104,13 @@ uint64 sys_exec(uint64 va) {
     struct proc* p = curr_proc();
     char name[200];
     copyinstr(p->pagetable, name, va, 200);
-    return exec(name);
+    char* null[1] = {0};
+    return exec(name, null);
 }
 
 uint64 sys_wait(int pid, uint64 va) {
-    struct proc *p = curr_proc();
-    int *code = (int *) useraddr(p->pagetable, va);
+    struct proc* p = curr_proc();
+    int* code = (int*)useraddr(p->pagetable, va);
     return wait(pid, code);
 }
 
@@ -120,26 +121,29 @@ uint64 sys_times() {
 uint64 sys_close(int fd) {
     if (fd == 0)
         return 0;
-    struct proc *p = curr_proc();
-    struct file *f = p->files[fd];
+    struct proc* p = curr_proc();
+    struct file* f = p->files[fd];
     fileclose(f);
     p->files[fd] = 0;
     return 0;
 }
 
 uint64 sys_openat(uint64 va, uint64 omode, uint64 _flags) {
-    struct proc *p = curr_proc();
+    struct proc* p = curr_proc();
     char path[200];
     copyinstr(p->pagetable, path, va, 200);
     return fileopen(path, omode);
 }
 
 void syscall() {
-    struct proc *p = curr_proc();
-    struct trapframe *trapframe = p->trapframe;
+    struct proc* p = curr_proc();
+    struct trapframe* trapframe = p->trapframe;
     int id = trapframe->a7, ret;
-    uint64 args[7] = {trapframe->a0, trapframe->a1, trapframe->a2, trapframe->a3, trapframe->a4, trapframe->a5, trapframe->a6};
-    trace("syscall %d args:%p %p %p %p %p %p %p\n", id, args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
+    uint64 args[7] = {trapframe->a0, trapframe->a1, trapframe->a2,
+                      trapframe->a3, trapframe->a4, trapframe->a5,
+                      trapframe->a6};
+    trace("syscall %d args:%p %p %p %p %p %p %p\n", id, args[0], args[1],
+          args[2], args[3], args[4], args[5], args[6]);
     switch (id) {
         case SYS_write:
             ret = sys_write(args[0], args[1], args[2]);
@@ -162,7 +166,7 @@ void syscall() {
         case SYS_getpid:
             ret = sys_getpid();
             break;
-        case SYS_clone:// SYS_fork
+        case SYS_clone:  // SYS_fork
             ret = sys_clone();
             break;
         case SYS_execve:

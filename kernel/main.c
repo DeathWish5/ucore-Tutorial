@@ -5,7 +5,7 @@ extern char e_bss[];
 
 void clean_bss() {
     char* p;
-    for(p = s_bss; p < e_bss; ++p)
+    for (p = s_bss; p < e_bss; ++p)
         *p = 0;
 }
 

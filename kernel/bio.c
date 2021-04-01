@@ -25,7 +25,7 @@ struct {
 } bcache;
 
 void binit(void) {
-    struct buf *b;
+    struct buf* b;
     // Create linked list of buffers
     bcache.head.prev = &bcache.head;
     bcache.head.next = &bcache.head;
@@ -39,9 +39,8 @@ void binit(void) {
 
 // Look through buffer cache for block on device dev.
 // If not found, allocate a buffer.
-static struct buf *
-bget(uint dev, uint blockno) {
-    struct buf *b;
+static struct buf* bget(uint dev, uint blockno) {
+    struct buf* b;
     // Is the block already cached?
     for (b = bcache.head.next; b != &bcache.head; b = b->next) {
         if (b->dev == dev && b->blockno == blockno) {
@@ -68,9 +67,8 @@ const int R = 0;
 const int W = 1;
 
 // Return a buf with the contents of the indicated block.
-struct buf *
-bread(uint dev, uint blockno) {
-    struct buf *b;
+struct buf* bread(uint dev, uint blockno) {
+    struct buf* b;
     b = bget(dev, blockno);
     if (!b->valid) {
         virtio_disk_rw(b, R);
@@ -80,13 +78,13 @@ bread(uint dev, uint blockno) {
 }
 
 // Write b's contents to disk.
-void bwrite(struct buf *b) {
+void bwrite(struct buf* b) {
     virtio_disk_rw(b, W);
 }
 
 // Release a buffer.
 // Move to the head of the most-recently-used list.
-void brelse(struct buf *b) {
+void brelse(struct buf* b) {
     b->refcnt--;
     if (b->refcnt == 0) {
         // no one is waiting for it.
@@ -99,10 +97,10 @@ void brelse(struct buf *b) {
     }
 }
 
-void bpin(struct buf *b) {
+void bpin(struct buf* b) {
     b->refcnt++;
 }
 
-void bunpin(struct buf *b) {
+void bunpin(struct buf* b) {
     b->refcnt--;
 }

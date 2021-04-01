@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-
 const unsigned char LF = 0x0a;
 const unsigned char CR = 0x0d;
 const unsigned char DL = 0x7f;
@@ -51,8 +50,9 @@ int main() {
                         int xstate = 0;
                         int exit_pid = 0;
                         exit_pid = wait(pid, &xstate);
-                        assert(pid == exit_pid, -1);
-                        printf("Shell: Process %d exited with code %d\n", pid, xstate);
+                        assert(pid == exit_pid);
+                        printf("Shell: Process %d exited with code %d\n", pid,
+                               xstate);
                     }
                     clear();
                 }

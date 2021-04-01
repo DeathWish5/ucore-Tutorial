@@ -1,25 +1,23 @@
-#include "types.h"
-#include "file.h"
-#include "proc.h"
 #include "defs.h"
-#include "fs.h"
+#include "file.h"
 #include "fcntl.h"
+#include "fs.h"
+#include "proc.h"
+#include "types.h"
 
-#define FILE_MAX (128*16)
+#define FILE_MAX (128 * 16)
 struct file filepool[FILE_MAX];
 
-void
-fileclose(struct file *f)
-{
-    if(f->ref < 1)
+void fileclose(struct file* f) {
+    if (f->ref < 1)
         panic("fileclose");
-    if(--f->ref > 0) {
+    if (--f->ref > 0) {
         return;
     }
 
-    if(f->type == FD_PIPE){
+    if (f->type == FD_PIPE) {
         pipeclose(f->pipe, f->writable);
-    } else if(f->type == FD_INODE) {
+    } else if (f->type == FD_INODE) {
         iput(f->ip);
     }
 
@@ -31,8 +29,8 @@ fileclose(struct file *f)
 }
 
 struct file* filealloc() {
-    for(int i = 0; i < FILE_MAX; ++i) {
-        if(filepool[i].ref == 0) {
+    for (int i = 0; i < FILE_MAX; ++i) {
+        if (filepool[i].ref == 0) {
             filepool[i].ref = 1;
             return &filepool[i];
         }
@@ -42,8 +40,7 @@ struct file* filealloc() {
 
 extern int PID;
 
-static struct inode *
-create(char *path, short type) {
+static struct inode* create(char* path, short type) {
     struct inode *ip, *dp;
     dp = root_dir();
     ivalid(dp);
@@ -60,10 +57,10 @@ create(char *path, short type) {
         panic("create: ialloc");
 
     trace("create dinod and inode type = %d\n", type);
-    
+
     ivalid(ip);
     iupdate(ip);
-    if(dirlink(dp, path, ip->inum) < 0)
+    if (dirlink(dp, path, ip->inum) < 0)
         panic("create: dirlink");
 
     iput(dp);
@@ -72,10 +69,10 @@ create(char *path, short type) {
 
 extern int PID;
 
-int fileopen(char *path, uint64 omode) {
+int fileopen(char* path, uint64 omode) {
     int fd;
-    struct file *f;
-    struct inode *ip;
+    struct file* f;
+    struct inode* ip;
     if (omode & O_CREATE) {
         ip = create(path, T_FILE);
         if (ip == 0) {
@@ -85,7 +82,6 @@ int fileopen(char *path, uint64 omode) {
         if ((ip = namei(path)) == 0) {
             return -1;
         }
-        ivalid(ip);
     }
     if (ip->type != T_FILE)
         panic("unsupported file inode type\n");

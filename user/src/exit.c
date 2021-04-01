@@ -9,7 +9,7 @@ int main(void) {
     int pid = fork();
     if (pid == 0) {
         puts("I am the child.");
-        for(int i = 0; i < 8; ++i) {
+        for (int i = 0; i < 8; ++i) {
             sched_yield();
         }
         exit(MAGIC);
@@ -19,14 +19,13 @@ int main(void) {
 
     puts("I am the parent, waiting now..");
     int xstate = 0;
-    if(wait(pid, &xstate) != pid || xstate != MAGIC) {
+    if (wait(pid, &xstate) != pid || xstate != MAGIC) {
         printf("wait %d fail\n", pid);
     }
-    if(wait(pid, &xstate) > 0 || wait(-1, &xstate) > 0) {
+    if (wait(pid, &xstate) > 0 || wait(-1, &xstate) > 0) {
         printf("wait should fail\n", pid);
     }
     printf("waitpid %d ok.\n", pid);
     puts("exit pass.");
     return 0;
 }
-

@@ -1,4 +1,5 @@
-struct trapframe {
+struct trapframe
+{
     /*   0 */ uint64 kernel_satp;   // kernel page table
     /*   8 */ uint64 kernel_sp;     // top of process's kernel stack
     /*  16 */ uint64 kernel_trap;   // usertrap()
@@ -37,7 +38,8 @@ struct trapframe {
     /* 280 */ uint64 t6;
 };
 
-enum {
+enum
+{
     InstructionMisaligned = 0,
     InstructionFault,
     IllegalInstruction,
@@ -54,7 +56,8 @@ enum {
     StorePageFault = 15,
 };
 
-enum Interrupt {
+enum Interrupt
+{
     UserSoft = 0,
     SupervisorSoft,
     UserTimer = 4,
@@ -62,4 +65,3 @@ enum Interrupt {
     UserExternal = 8,
     SupervisorExternal,
 };
-

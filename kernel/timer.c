@@ -1,5 +1,5 @@
-#include "riscv.h"
 #include "defs.h"
+#include "riscv.h"
 
 const uint64 TICKS_PER_SEC = 100;
 const uint64 MSEC_PER_SEC = 1000;

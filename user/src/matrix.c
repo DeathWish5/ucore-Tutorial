@@ -7,15 +7,15 @@ int main() {
     int matb[MATSIZE][MATSIZE];
     int matc[MATSIZE][MATSIZE];
     int i, j, k, size = MATSIZE;
-    for (i = 0; i < size; i ++) {
-        for (j = 0; j < size; j ++) {
+    for (i = 0; i < size; i++) {
+        for (j = 0; j < size; j++) {
             mata[i][j] = matb[i][j] = 1;
         }
     }
 
     int times = 200;
 
-    while(times -- > 0) {
+    while (times-- > 0) {
         for (i = 0; i < size; i++) {
             for (j = 0; j < size; j++) {
                 matc[i][j] = 0;

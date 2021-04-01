@@ -4,6 +4,6 @@
 int rand(void);
 void srand(unsigned);
 void panic(char*);
-void assert(int, int);
+void assert(int);
 
-#endif //__STDLIB_H__
+#endif  //__STDLIB_H__

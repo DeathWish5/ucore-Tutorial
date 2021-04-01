@@ -1,9 +1,8 @@
-#include "defs.h"
 #include <stdarg.h>
+#include "defs.h"
 static char digits[] = "0123456789abcdef";
 
-static void
-printint(int xx, int base, int sign) {
+static void printint(int xx, int base, int sign) {
     char buf[16];
     int i;
     uint x;
@@ -25,8 +24,7 @@ printint(int xx, int base, int sign) {
         consputc(buf[i]);
 }
 
-static void
-printptr(uint64 x) {
+static void printptr(uint64 x) {
     int i;
     consputc('0');
     consputc('x');
@@ -35,10 +33,10 @@ printptr(uint64 x) {
 }
 
 // Print to the console. only understands %d, %x, %p, %s.
-void printf(const char *fmt, ...) {
+void printf(const char* fmt, ...) {
     va_list ap;
     int i, c;
-    char *s;
+    char* s;
 
     if (fmt == 0)
         panic("null fmt");
@@ -63,7 +61,7 @@ void printf(const char *fmt, ...) {
                 printptr(va_arg(ap, uint64));
                 break;
             case 's':
-                if ((s = va_arg(ap, char *)) == 0)
+                if ((s = va_arg(ap, char*)) == 0)
                     s = "(null)";
                 for (; *s; s++)
                     consputc(*s);
@@ -81,15 +79,15 @@ void printf(const char *fmt, ...) {
 }
 
 int COLOR[] = {
-        [TRACE] = WHITE,
-        [ERROR] = RED,
-        [WARN] = YELLOW,
-        [INFO] = BRIGHT_YOUND,
+    [TRACE] = WHITE,
+    [ERROR] = RED,
+    [WARN] = YELLOW,
+    [INFO] = BRIGHT_YOUND,
 };
 
-const char *LEVEL[] = {
-        [TRACE] = "TRACE",
-        [ERROR] = "ERROR",
-        [WARN] = "WARN",
-        [INFO] = "INFO",
+const char* LEVEL[] = {
+    [TRACE] = "TRACE",
+    [ERROR] = "ERROR",
+    [WARN] = "WARN",
+    [INFO] = "INFO",
 };

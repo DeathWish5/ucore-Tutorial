@@ -9,15 +9,13 @@ int getchar() {
     return byte;
 }
 
-int putchar(int c)
-{
+int putchar(int c) {
     static char put[2] = {0, 0};
     put[0] = c;
     return write(stdout, put, 1);
 }
 
-int puts(const char* s)
-{
+int puts(const char* s) {
     int r;
     r = -(write(stdout, s, strlen(s)) < 0 || putchar('\n') < 0);
     return r;
@@ -59,7 +57,7 @@ static void printptr(uint64 x) {
 void printf(const char* fmt, ...) {
     va_list ap;
     int i, c;
-    char *s;
+    char* s;
 
     va_start(ap, fmt);
     for (i = 0; (c = fmt[i] & 0xff) != 0; i++) {
@@ -81,8 +79,8 @@ void printf(const char* fmt, ...) {
                 printptr(va_arg(ap, uint64));
                 break;
             case 's':
-                if ((s = va_arg(ap, char *)) == 0)
-                s = "(null)";
+                if ((s = va_arg(ap, char*)) == 0)
+                    s = "(null)";
                 for (; *s; s++)
                     putchar(*s);
                 break;

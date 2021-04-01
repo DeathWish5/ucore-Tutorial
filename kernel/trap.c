@@ -1,20 +1,20 @@
 #include "defs.h"
 #include "trap.h"
+#include "memory_layout.h"
 #include "proc.h"
 #include "riscv.h"
-#include "memory_layout.h"
 
 extern char trampoline[], uservec[], userret[];
 void kernelvec();
 
 // set up to take exceptions and traps while in the kernel.
 void set_usertrap(void) {
-    w_stvec(((uint64) TRAMPOLINE + (uservec - trampoline)) & ~0x3);     // DIRECT
+    w_stvec(((uint64)TRAMPOLINE + (uservec - trampoline)) & ~0x3);  // DIRECT
     intr_off();
 }
 
 void set_kerneltrap(void) {
-    w_stvec((uint64) kernelvec & ~0x3);     // DIRECT
+    w_stvec((uint64)kernelvec & ~0x3);  // DIRECT
     intr_on();
 }
 
@@ -24,7 +24,8 @@ void trapinit() {
 }
 
 void unknown_trap() {
-    error("unknown trap: %p, stval = %p sepc = %p\n", r_scause(), r_stval(), r_sepc());
+    error("unknown trap: %p, stval = %p sepc = %p\n", r_scause(), r_stval(),
+          r_sepc());
     exit(-1);
 }
 
@@ -34,7 +35,7 @@ void devintr(uint64 cause) {
         case SupervisorTimer:
             set_next_timer();
             // if form user, allow yield
-            if((r_sstatus() & SSTATUS_SPP) == 0) {
+            if ((r_sstatus() & SSTATUS_SPP) == 0) {
                 yield();
             }
             break;
@@ -62,7 +63,7 @@ void devintr(uint64 cause) {
 //
 void usertrap() {
     set_kerneltrap();
-    struct trapframe *trapframe = curr_proc()->trapframe;
+    struct trapframe* trapframe = curr_proc()->trapframe;
     trace("usertrap from %p\n", trapframe->epc);
     if ((r_sstatus() & SSTATUS_SPP) != 0)
         panic("usertrap: not from user mode");
@@ -83,14 +84,16 @@ void usertrap() {
             case LoadFault:
             case LoadPageFault:
                 error(
-                        "%d in application, bad addr = %p, bad instruction = %p, core dumped.\n",
-                        cause,
-                        r_stval(),
-                        trapframe->epc);
+                    "%d in application, bad addr = %p, bad instruction = %p, "
+                    "core dumped.\n",
+                    cause, r_stval(), trapframe->epc);
                 exit(-2);
                 break;
             case IllegalInstruction:
-                error("IllegalInstruction in application, epc = %p, core dumped.\n", trapframe->epc);
+                error(
+                    "IllegalInstruction in application, epc = %p, core "
+                    "dumped.\n",
+                    trapframe->epc);
                 exit(-3);
                 break;
             default:
@@ -104,26 +107,27 @@ void usertrap() {
 extern int PID;
 
 void usertrapret() {
-    struct trapframe *trapframe;
+    struct trapframe* trapframe;
     set_usertrap();
     trapframe = curr_proc()->trapframe;
-    trapframe->kernel_satp = r_satp();                      // kernel page table
-    trapframe->kernel_sp = curr_proc()->kstack + PGSIZE;    // process's kernel stack
-    trapframe->kernel_trap = (uint64) usertrap;
-    trapframe->kernel_hartid = r_tp();                      // hartid for cpuid()
+    trapframe->kernel_satp = r_satp();  // kernel page table
+    trapframe->kernel_sp =
+        curr_proc()->kstack + PGSIZE;  // process's kernel stack
+    trapframe->kernel_trap = (uint64)usertrap;
+    trapframe->kernel_hartid = r_tp();  // hartid for cpuid()
 
     w_sepc(trapframe->epc);
     // set S Previous Privilege mode to User.
     uint64 x = r_sstatus();
-    x &= ~SSTATUS_SPP;// clear SPP to 0 for user mode
-    x |= SSTATUS_SPIE;// enable interrupts in user mode
+    x &= ~SSTATUS_SPP;  // clear SPP to 0 for user mode
+    x |= SSTATUS_SPIE;  // enable interrupts in user mode
     w_sstatus(x);
 
     // tell trampoline.S the user page table to switch to.
     uint64 satp = MAKE_SATP(curr_proc()->pagetable);
     trace("return to user at %p\n", trapframe->epc);
     uint64 fn = TRAMPOLINE + (userret - trampoline);
-    ((void (*)(uint64, uint64)) fn)(TRAPFRAME, satp);
+    ((void (*)(uint64, uint64))fn)(TRAPFRAME, satp);
 }
 
 // interrupts and exceptions from kernel code go here via kernelvec,
@@ -134,14 +138,14 @@ void kerneltrap() {
     uint64 sstatus = r_sstatus();
     uint64 scause = r_scause();
 
-
     if ((sstatus & SSTATUS_SPP) == 0)
         panic("kerneltrap: not from supervisor mode");
 
     if (scause & (1ULL << 63)) {
         devintr(scause & 0xff);
     } else {
-        error("invalid trap from kernel: %p, stval = %p sepc = %p\n", scause, r_stval(), sepc);
+        error("invalid trap from kernel: %p, stval = %p sepc = %p\n", scause,
+              r_stval(), sepc);
         exit(-1);
     }
     // the yield() may have caused some traps to occur,

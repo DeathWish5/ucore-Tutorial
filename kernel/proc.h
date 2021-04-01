@@ -4,6 +4,7 @@
 #define TRAPFRAME_SIZE (4096)
 
 #include "file.h"
+#include "vm.h"
 
 #define FD_MAX (16)
 
@@ -31,16 +32,16 @@ enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 // Per-process state
 struct proc {
     // p->lock must be held when using these:
-    enum procstate state;        // Process state
-    int pid;                     // Process ID
-    pagetable_t pagetable;       // User page table
+    enum procstate state;   // Process state
+    int pid;                // Process ID
+    struct memset mm;  // User page table
     // these are private to the process, so p->lock need not be held.
     uint64 ustack;
-    uint64 kstack;               // Virtual address of kernel stack
-    struct trapframe *trapframe; // data page for trampoline.S
-    struct context context;      // swtch() here to run process
+    uint64 kstack;                // Virtual address of kernel stack
+    struct trapframe* trapframe;  // data page for trampoline.S
+    struct context context;       // swtch() here to run process
     uint64 sz;
-    struct proc *parent;         // Parent process
+    struct proc* parent;  // Parent process
     uint64 exit_code;
 
     struct file* files[16];

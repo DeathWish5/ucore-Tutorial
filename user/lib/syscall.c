@@ -3,7 +3,7 @@
 
 #include "syscall.h"
 
-int open(const char *path, int flags, int mode) {
+int open(const char* path, int flags, int mode) {
     return syscall(SYS_openat, path, flags, mode);
 }
 
@@ -11,11 +11,11 @@ int close(int fd) {
     return syscall(SYS_close, fd);
 }
 
-ssize_t read(int fd, void *buf, unsigned long long len) {
+ssize_t read(int fd, void* buf, unsigned long long len) {
     return syscall(SYS_read, fd, buf, len);
 }
 
-ssize_t write(int fd, const void *buf, unsigned long long len) {
+ssize_t write(int fd, const void* buf, unsigned long long len) {
     return syscall(SYS_write, fd, buf, len);
 }
 
@@ -49,7 +49,7 @@ uint64 get_time() {
 
 int sleep(unsigned long long time) {
     unsigned long long s = get_time();
-    while(get_time() < s + time) {
+    while (get_time() < s + time) {
         sched_yield();
     }
     return 0;

@@ -22,10 +22,11 @@ bin: elf
 	@mkdir -p asm
 	@$(CP) build/asm/* asm
 	@mkdir -p $(out_dir)
-	@$(CP) build/target/* target
+	@$(CP) build/$(ARCH)/* $(out_dir)
+	@$(CP) build/target/shell.bin $(out_dir)/binshell
 
 fs.img: bin ../nfs/fs
-	../nfs/fs fs.img $(wildcard $(out_dir)/*.bin)
+	../nfs/fs fs.img $(wildcard $(out_dir)/*)
 
 clean:
 	@rm -rf build target asm *.img
