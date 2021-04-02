@@ -8,8 +8,6 @@ struct pipe;
 struct proc;
 // struct stat;
 struct superblock;
-struct vmarea;
-struct memset;
 
 // panic.c
 void loop();
@@ -50,12 +48,6 @@ void syscall();
 // swtch.S
 void swtch(struct context*, struct context*);
 
-// loader.c
-void batchinit();
-int run_all_app();
-int get_id_by_name(char* name);
-void loader(int, void*);
-
 // proc.c
 struct proc* curr_proc();
 void exit(int);
@@ -68,8 +60,9 @@ int wait(int, int*);
 struct proc* allocproc();
 int fdalloc(struct file*);
 int cpuid();
-struct memset* proc_pagetable(struct proc*);
-void proc_freepagetable(struct memset*, uint64);
+pagetable_t proc_pagetable(struct proc*);
+void proc_freepagetable(pagetable_t, uint64);
+void userinit(void);
 
 // exec.c
 int exec(char*, char**);
@@ -85,8 +78,7 @@ void kvmmap(pagetable_t, uint64, uint64, uint64, int);
 int mappages(pagetable_t, uint64, uint64, uint64, int);
 pagetable_t uvmcreate(void);
 void uvminit(pagetable_t, uchar*, uint);
-uint64 uvmalloc(pagetable_t, uint64, uint64);
-uint64 uvmdealloc(pagetable_t, uint64, uint64);
+uint64 uvmmap(pagetable_t, uint64, uint64);
 int uvmcopy(pagetable_t, pagetable_t, uint64);
 void uvmclear(pagetable_t, uint64);
 void uvmfree(pagetable_t, uint64);
@@ -99,10 +91,7 @@ int copyout(pagetable_t, uint64, char*, uint64);
 int copyinstr(pagetable_t, char*, uint64, uint64);
 int either_copyout(int user_dst, uint64 dst, char* src, uint64 len);
 int either_copyin(int user_src, uint64 src, char* dst, uint64 len);
-struct vmarea * vmalloc();
-void vmfree(struct vmarea *vm);
-struct vmarea* vminsert(struct vmarea* n, struct vmarea* prev);
-struct vmarea* vmremove(struct vmarea* n, struct vmarea* prev);
+void uvminit(pagetable_t pagetable, uchar *src, uint sz);
 
 // timer.c
 uint64 get_cycle();

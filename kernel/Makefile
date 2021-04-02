@@ -1,8 +1,7 @@
 U = ../user
 
 SRCS = $(wildcard *.S *.c)
-OBJS = $(addsuffix .o, $(basename $(SRCS))) link_app.o
-
+OBJS = $(addsuffix .o, $(basename $(SRCS)))
 # Try to infer the correct TOOLPREFIX if not set
 TOOLPREFIX = riscv64-unknown-elf-
 CC = $(TOOLPREFIX)gcc
@@ -31,19 +30,13 @@ endif
 
 LDFLAGS = -z max-page-size=4096
 
-link_app.o: link_app.S
-link_app.S: pack.py
-	@$(PY) pack.py
-kernel_app.ld: kernelld.py
-	@$(PY) kernelld.py
-
-kernel: $(OBJS) kernel_app.ld link_app.S
-	$(LD) $(LDFLAGS) -T kernel_app.ld -o kernel $(OBJS)
+kernel: $(OBJS) kernel.ld
+	$(LD) $(LDFLAGS) -T kernel.ld -o kernel $(OBJS)
 	$(OBJDUMP) -S kernel > kernel.asm
 	$(OBJDUMP) -t kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > kernel.sym
 
 clean: 
-	rm -f *.o *.d kernel *.sym *.asm link_app.S kernel_app.ld *.log
+	rm -f *.o *.d kernel *.sym *.asm *.log
 
 ifndef CPUS
 CPUS := 1

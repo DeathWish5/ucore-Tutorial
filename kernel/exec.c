@@ -5,8 +5,6 @@
 #include "riscv.h"
 #include "trap.h"
 
-#define MAXARG 32  // max exec arguments
-
 static int loadseg(pde_t* pgdir,
                    uint64 addr,
                    struct inode* ip,
@@ -58,14 +56,14 @@ int exec(char* path, char** argv) {
             error("6\n");
             goto bad;
         }
-        uint64 sz1;
-        if ((sz1 = uvmalloc(pagetable, sz, ph.vaddr + ph.memsz)) == 0)
-            goto bad;
-        sz = sz1;
         if (ph.vaddr % PGSIZE != 0) {
             error("7 v = %p\n", ph.vaddr);
             goto bad;
         }
+        uint64 sz1;
+        if ((sz1 = uvmmap(pagetable, ph.vaddr, ph.memsz)) == 0)
+            goto bad;
+        sz = MAX(sz1 + ph.vaddr, sz);
         if (loadseg(pagetable, ph.vaddr, ip, ph.off, ph.filesz) < 0) {
             error("8\n");
             goto bad;
@@ -80,16 +78,14 @@ int exec(char* path, char** argv) {
     // Allocate two pages at the next page boundary.
     // Use the second as the user stack.
     sz = PGROUNDUP(sz);
-    uint64 sz1;
-    if ((sz1 = uvmalloc(pagetable, sz, sz + 2 * PGSIZE)) == 0) {
+    if (uvmmap(pagetable, sz, 2 * PGSIZE) == 0) {
         error("4\n");
         goto bad;
     }
-    sz = sz1;
+    sz += 2 * PGSIZE;
     uvmclear(pagetable, sz - 2 * PGSIZE);
     sp = sz;
     stackbase = sp - PGSIZE;
-
     // Push argument strings, prepare rest of stack in ustack.
     for (argc = 0; argv[argc]; argc++) {
         if (argc >= MAXARG)
@@ -107,7 +103,6 @@ int exec(char* path, char** argv) {
         ustack[argc] = sp;
     }
     ustack[argc] = 0;
-
     // push the array of argv[] pointers.
     sp -= (argc + 1) * sizeof(uint64);
     sp -= sp % 16;

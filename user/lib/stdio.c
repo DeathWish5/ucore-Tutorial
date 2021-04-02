@@ -11,7 +11,7 @@ int getchar() {
 
 int putchar(int c) {
     static char put[2] = {0, 0};
-    put[0] = c;
+    put[0] = (char)c;
     return write(stdout, put, 1);
 }
 

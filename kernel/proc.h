@@ -2,6 +2,7 @@
 #define KSTACK_SIZE (4096)
 #define USTACK_SIZE (4096)
 #define TRAPFRAME_SIZE (4096)
+#define MAXARG 32  // max exec arguments
 
 #include "file.h"
 #include "vm.h"
@@ -34,7 +35,7 @@ struct proc {
     // p->lock must be held when using these:
     enum procstate state;   // Process state
     int pid;                // Process ID
-    struct memset mm;  // User page table
+    pagetable_t pagetable;
     // these are private to the process, so p->lock need not be held.
     uint64 ustack;
     uint64 kstack;                // Virtual address of kernel stack

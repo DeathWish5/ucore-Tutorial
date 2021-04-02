@@ -41,7 +41,7 @@ int main() {
                     int pid = fork();
                     if (pid == 0) {
                         // child process
-                        if (exec(line) < 0) {
+                        if (exec(line, 0) < 0) {
                             printf("no such program\n");
                             exit(0);
                         }

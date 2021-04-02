@@ -1,5 +1,4 @@
 #include "defs.h"
-#include "vm.h"
 #include "memory_layout.h"
 #include "proc.h"
 #include "riscv.h"
@@ -8,8 +7,6 @@ pagetable_t kernel_pagetable;
 
 extern char e_text[];  // kernel.ld sets this to end of kernel code.
 extern char trampoline[];
-
-struct vmarea vmpool[VMMAX];
 
 // Make a direct-map page table for the kernel.
 pagetable_t kvmmake(void) {
@@ -94,7 +91,10 @@ uint64 walkaddr(pagetable_t pagetable, uint64 va) {
 }
 
 uint64 useraddr(pagetable_t pagetable, uint64 va) {
-    return walkaddr(pagetable, va) | (va & 0xFFFULL);
+    uint64 page = walkaddr(pagetable, va);
+    if(page)
+        return page | (va & 0xFFFULL);
+    return 0;
 }
 
 // add a mapping to the kernel page table.
@@ -109,53 +109,47 @@ void kvmmap(pagetable_t kpgtbl, uint64 va, uint64 pa, uint64 sz, int perm) {
 // physical addresses starting at pa. va and size might not
 // be page-aligned. Returns 0 on success, -1 if walk() couldn't
 // allocate a needed page-table page.
-int mappages(struct memset* mm,
+int mappages(pagetable_t pagetable,
              uint64 va,
              uint64 size,
              uint64 pa,
              int perm) {
-    pagetable_t pagetable;
-    struct vmarea* area;
     uint64 a, last;
     pte_t* pte;
-    
-    pagetable = mm->pg;
+
     a = PGROUNDDOWN(va);
     last = PGROUNDDOWN(va + size - 1);
     for (;;) {
         if ((pte = walk(pagetable, a, 1)) == 0)
             return -1;
-        if (*pte & PTE_V)
-            panic("remap");
+        if (*pte & PTE_V) {
+            error("remap");
+            return -1;
+        }
         *pte = PA2PTE(pa) | perm | PTE_V;
         if (a == last)
             break;
         a += PGSIZE;
         pa += PGSIZE;
     }
-    area = vmalloc(va, va+size);
-    vminsert(area, mm->vmlist);
     return 0;
 }
 
 // Remove npages of mappings starting from va. va must be
 // page-aligned. The mappings must exist.
 // Optionally free the physical memory.
-void uvmunmap(struct memset* mm, uint64 va, uint64 npages, int do_free) {
-    pagetable_t pagetable;
-    struct vmarea* area;
+void uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free) {
     uint64 a;
     pte_t* pte;
 
-    pagetable = mm->pg;
     if ((va % PGSIZE) != 0)
         panic("uvmunmap: not aligned");
 
     for (a = va; a < va + npages * PGSIZE; a += PGSIZE) {
         if ((pte = walk(pagetable, a, 0)) == 0)
-            panic("uvmunmap: walk");
+            continue;
         if ((*pte & PTE_V) == 0)
-            panic("uvmunmap: not mapped");
+            continue;
         if (PTE_FLAGS(*pte) == PTE_V)
             panic("uvmunmap: not a leaf");
         if (do_free) {
@@ -177,48 +171,29 @@ pagetable_t uvmcreate() {
     return pagetable;
 }
 
-// Allocate PTEs and physical memory to grow process from oldsz to
-// newsz, which need not be page aligned.  Returns new size or 0 on error.
-// uint64 uvmalloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz) {
-//     char* mem;
-//     uint64 a;
+uint64  uvmmap(pagetable_t pagetable, uint64 va, uint64 size) {
+    char* mem;
+    uint64 a;
 
-//     if (newsz < oldsz)
-//         return oldsz;
+    if((va % PGSIZE) != 0)
+        return -1;
 
-//     oldsz = PGROUNDUP(oldsz);
-//     for (a = oldsz; a < newsz; a += PGSIZE) {
-//         mem = kalloc();
-//         if (mem == 0) {
-//             uvmdealloc(pagetable, a, oldsz);
-//             return 0;
-//         }
-//         memset(mem, 0, PGSIZE);
-//         if (mappages(pagetable, a, PGSIZE, (uint64)mem,
-//                      PTE_W | PTE_X | PTE_R | PTE_U) != 0) {
-//             kfree(mem);
-//             uvmdealloc(pagetable, a, oldsz);
-//             return 0;
-//         }
-//     }
-//     return newsz;
-// }
-
-// Deallocate user pages to bring the process size from oldsz to
-// newsz.  oldsz and newsz need not be page-aligned, nor does newsz
-// need to be less than oldsz.  oldsz can be larger than the actual
-// process size.  Returns the new process size.
-// uint64 uvmdealloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz) {
-//     if (newsz >= oldsz)
-//         return oldsz;
-
-//     if (PGROUNDUP(newsz) < PGROUNDUP(oldsz)) {
-//         int npages = (PGROUNDUP(oldsz) - PGROUNDUP(newsz)) / PGSIZE;
-//         uvmunmap(pagetable, PGROUNDUP(newsz), npages, 1);
-//     }
-
-//     return newsz;
-// }
+    size = PGROUNDUP(size);
+    for (a = va; a < va + size; a += PGSIZE) {
+        if ((mem = kalloc()) == 0) {
+            panic("kalloc");
+        }
+        memset(mem, 0, PGSIZE);
+        if (mappages(pagetable, a, PGSIZE, (uint64)mem,
+                     PTE_W | PTE_X | PTE_R | PTE_U) != 0) {
+            error("remap of user page\n");
+            kfree(mem);
+            uvmunmap(pagetable, va, a - va, 1);
+            return 0;
+        }
+    }
+    return size;
+}
 
 // Recursively free page-table pages.
 // All leaf mappings must already have been removed.
@@ -247,9 +222,9 @@ void freewalk(pagetable_t pagetable) {
             uint64 child = PTE2PA(pte);
             freewalk((pagetable_t)child);
             pagetable[i] = 0;
-        } else if (pte & PTE_V) {
+        } /* else if (pte & PTE_V) {
             panic("freewalk: leaf");
-        }
+        }*/
     }
     kfree((void*)pagetable);
 }
@@ -257,7 +232,8 @@ void freewalk(pagetable_t pagetable) {
 // Free user memory pages,
 // then free page-table pages.
 void uvmfree(pagetable_t pagetable, uint64 sz) {
-    uvmunmap(pagetable, 0, PGROUNDUP(sz) / PGSIZE, 1);
+    if (sz > 0)
+        uvmunmap(pagetable, 0, PGROUNDUP(sz) / PGSIZE, 1);
     freewalk(pagetable);
 }
 
@@ -280,13 +256,14 @@ int uvmcopy(pagetable_t old, pagetable_t new, uint64 sz) {
 
     for (i = 0; i < sz; i += PGSIZE) {
         if ((pte = walk(old, i, 0)) == 0)
-            panic("uvmcopy: pte should exist");
+            continue;
         if ((*pte & PTE_V) == 0)
-            panic("uvmcopy: page not present");
+            continue;
         pa = PTE2PA(*pte);
         flags = PTE_FLAGS(*pte);
         if ((mem = kalloc()) == 0)
             goto err;
+        // memset(mem, 0, PGSIZE);
         memmove(mem, (char*)pa, PGSIZE);
         if (mappages(new, i, PGSIZE, (uint64)mem, flags) != 0) {
             kfree(mem);
@@ -300,29 +277,20 @@ err:
     return -1;
 }
 
-struct vmarea * vmalloc(uint64 start, uint64 end) {
-    for (int i = 0; i < VMMAX; ++i) {
-        if (vmpool[i].start == 0 && vmpool[i].end == 0) {
-            vmpool[i].start = start;
-            vmpool[i].end = end;
-            return &vmpool[i];
-        }
-    }
-    return 0;
-}
+// Load the user initcode into address 0 of pagetable,
+// for the very first process.
+// sz must be less than a page.
+void
+uvminit(pagetable_t pagetable, uchar *src, uint sz)
+{
+  char *mem;
 
-void vmfree(struct vmarea *vm) {
-    vm->start = vm->end = 0;
-}
-
-struct vmarea* vminsert(struct vmarea* n, struct vmarea* prev) {
-    n->next = prev->next;
-    prev->next = n;
-}
-
-struct vmarea* vmremove(struct vmarea* n, struct vmarea* prev) {
-    prev->next = n->next;
-    vmfree(n);
+  if(sz >= PGSIZE)
+    panic("inituvm: more than a page");
+  mem = kalloc();
+  memset(mem, 0, PGSIZE);
+  mappages(pagetable, 0, PGSIZE, (uint64)mem, PTE_W|PTE_R|PTE_X|PTE_U);
+  memmove(mem, src, sz);
 }
 
 // Copy from kernel to user.

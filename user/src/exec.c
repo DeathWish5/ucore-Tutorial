@@ -3,7 +3,6 @@
 #include <unistd.h>
 
 int main() {
-    puts("execute hello");
-    exec("hello");
+    char* _argv[] = {"(*o*)", "(>.<)", "(O.O)", "(QwQ)", "orz", "没有了呀"};
+    exec("args", _argv);
     return 0;
-}

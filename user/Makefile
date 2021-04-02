@@ -23,7 +23,6 @@ bin: elf
 	@$(CP) build/asm/* asm
 	@mkdir -p $(out_dir)
 	@$(CP) build/$(ARCH)/* $(out_dir)
-	@$(CP) build/target/shell.bin $(out_dir)/binshell
 
 fs.img: bin ../nfs/fs
 	../nfs/fs fs.img $(wildcard $(out_dir)/*)

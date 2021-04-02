@@ -393,16 +393,16 @@ struct inode* root_dir() {
 }
 
 struct inode* namei(char* path) {
-    int skip = 0;
-    // if(path[0] == '.' && path[1] == '/')
-    //     skip = 2;
-    // if (path[0] == '/') {
-    //     skip = 1;
-    // }
+    if(*path == '.')
+        path++;
+    while(*path == '/')
+        path++;
+    if(*path == 0)
+        return 0;
     struct inode* dp = root_dir();
     if (dp == 0)
         panic("fs dumped.\n");
-    struct inode* ip = dirlookup(dp, path + skip, 0);
+    struct inode* ip = dirlookup(dp, path, 0);
     if (ip != 0)
         ivalid(ip);
     return ip;

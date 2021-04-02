@@ -39,8 +39,10 @@ int wait(int pid, int* code) {
     return syscall(SYS_wait4, pid, code);
 }
 
-int exec(char* name) {
-    return syscall(SYS_execve, name);
+static char** null = {0};
+
+int exec(char* name, char** argv) {
+    return syscall(SYS_execve, name, argv == 0 ? null : argv);
 }
 
 uint64 get_time() {

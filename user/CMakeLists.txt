@@ -30,7 +30,7 @@ set(CMAKE_C_COMPILER        ${PREFIX}gcc)
 set(CMAKE_OBJCOPY           ${PREFIX}objcopy)
 set(CMAKE_OBJDUMP           ${PREFIX}objdump)
 set(CMAKE_RANLIB            ${PREFIX}ranlib)
-set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -fno-builtin -nostdinc -fno-stack-protector -ggdb -Wall")
+set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -fno-builtin -nostdinc -fno-stack-protector -ggdb -Wall -mno-relax")
 set(CMAKE_ASM_FLAGS         ${CMAKE_C_FLAGS})
 set(CMAKE_C_LINK_FLAGS      "${LINK_FLAGS} -nostdlib")  # override default value to get rid of '-Wl,-search_paths_first -Wl,-headerpad_max_install_names'
 set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS)                  # override default value to get rid of '-rdynamic' on Linux
@@ -45,6 +45,7 @@ target_include_directories(ulib PRIVATE ${ARCH_DIR})
 
 # Execuatble
 aux_source_directory(src SRCS)
+aux_source_directory(src/child SRCS)
 set(EXECUTABLE_OUTPUT_PATH ${ARCH})
 foreach(PATH ${SRCS})
     get_filename_component(NAME ${PATH} NAME_WE)

@@ -14,6 +14,7 @@ extern char boot_stack_top[];
 struct proc* current_proc = 0;
 struct proc idle;
 int curr_pid = 0;
+struct proc *initproc;
 
 struct proc* curr_proc() {
     if (current_proc == 0)
@@ -36,8 +37,8 @@ int allocpid() {
     return PID++;
 }
 
-struct memset* proc_pagetable(struct proc* p) {
-    struct memset* mm;
+pagetable_t proc_pagetable(struct proc* p) {
+    pagetable_t pagetable;
 
     // An empty page table.
     pagetable = uvmcreate();
@@ -50,9 +51,7 @@ struct memset* proc_pagetable(struct proc* p) {
         return 0;
     }
 
-    if ((p->trapframe = (struct trapframe*)kalloc()) == 0) {
-        panic("kalloc\n");
-    }
+    memset(p->trapframe, 0, PGSIZE);
     // map the trapframe just below TRAMPOLINE, for trampoline.S.
     if (mappages(pagetable, TRAPFRAME, PGSIZE, (uint64)(p->trapframe),
                  PTE_R | PTE_W) < 0) {
@@ -98,12 +97,18 @@ struct proc* allocproc(void) {
     return 0;
 
 found:
+    // Allocate a trapframe page.
     p->pid = allocpid();
     p->state = USED;
     p->sz = 0;
     p->exit_code = -1;
     p->parent = 0;
     p->ustack = 0;
+    if((p->trapframe = (struct trapframe *)kalloc()) == 0){
+        freeproc(p);
+        return 0;
+    }
+    memset(p->trapframe, 0, PGSIZE);
     p->pagetable = proc_pagetable(p);
     if (p->pagetable == 0) {
         panic("");
@@ -240,4 +245,39 @@ int fdalloc(struct file* f) {
 
 int cpuid() {
     return 0;
+}
+
+// a user program that calls exec("/init")
+// od -t xC initcode
+uchar initcode[] = {
+  0x17, 0x05, 0x00, 0x00,           
+  0x13, 0x05, 0x45, 0x02,         
+  0x97, 0x05, 0x00, 0x00, 
+  0x93, 0x85, 0x35, 0x02,
+  0x93, 0x08, 0xd0, 0x0d,       // li a7, 221
+  0x73, 0x00, 0x00, 0x00,
+  0x93, 0x08, 0x20, 0x00, 
+  0x73, 0x00, 0x00, 0x00,
+  0xef, 0xf0, 0x9f, 0xff, 
+  0x2f, 0x69, 0x6e, 0x69,
+  0x74, 0x00, 0x00, 0x24, 
+  0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00
+};
+
+// Set up first user process.
+void userinit(void) {
+  struct proc *p;
+
+  p = allocproc();
+  initproc = p;
+  
+  // allocate one user page and copy init's instructions
+  // and data into it.
+  uvminit(p->pagetable, initcode, sizeof(initcode));
+  p->sz = PGSIZE;
+  // prepare for the very first "return" from kernel to user.
+  p->trapframe->epc = 0;      // user program counter
+  p->trapframe->sp = PGSIZE;  // user stack pointer
+  p->state = RUNNABLE;
 }

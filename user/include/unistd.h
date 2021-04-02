@@ -13,7 +13,7 @@ pid_t getpid(void);
 int sched_yield(void);
 void exit(int);
 int fork(void);
-int exec(char*);
+int exec(char*, char**);
 int wait(int, int*);
 int pipe(void*);
 uint64 get_time();

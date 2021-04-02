@@ -100,12 +100,21 @@ uint64 sys_clone() {
     return fork();
 }
 
-uint64 sys_exec(uint64 va) {
+uint64 fetchaddr(pagetable_t pagetable, uint64 va) {
+    uint64* addr = (uint64*)useraddr(pagetable, va);
+    return *addr;
+}
+
+uint64 sys_exec(uint64 path, uint64 uargv) {
     struct proc* p = curr_proc();
     char name[200];
-    copyinstr(p->pagetable, name, va, 200);
-    char* null[1] = {0};
-    return exec(name, null);
+    copyinstr(p->pagetable, name, path, 200);
+    char* argv[MAXARG];
+    uint64 arg;
+    for(int i = 0; uargv && (arg = fetchaddr(p->pagetable, uargv)); uargv += sizeof(char*), i++) {
+        argv[i] = (char*)useraddr(p->pagetable, arg);
+    }
+    return exec(name, (char**)argv);
 }
 
 uint64 sys_wait(int pid, uint64 va) {
@@ -170,7 +179,7 @@ void syscall() {
             ret = sys_clone();
             break;
         case SYS_execve:
-            ret = sys_exec(args[0]);
+            ret = sys_exec(args[0], args[1]);
             break;
         case SYS_wait4:
             ret = sys_wait(args[0], args[1]);
@@ -184,6 +193,7 @@ void syscall() {
         default:
             ret = -1;
             warn("unknown syscall %d\n", id);
+            while(1){}
     }
     trapframe->a0 = ret;
     trace("syscall ret %d\n", ret);
