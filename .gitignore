@@ -14,4 +14,4 @@ link_app.S
 *.sym
 *.img
 *.log
-fs/fs
+nfs/fs
