@@ -264,7 +264,6 @@ virtio_disk_rw(struct buf *b, int write)
         // yield();
     }
     intr_off();
-    // info("wait for intr over = %d\n", intr_get());
     disk.info[idx[0]].b = 0;
     free_chain(idx[0]);
 }

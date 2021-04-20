@@ -17,7 +17,7 @@ void set_kerneltrap(void) {
 }
 
 void trapinit() {
-    set_usertrap();
+    set_kerneltrap();
     w_sie(r_sie() | SIE_SEIE | SIE_STIE | SIE_SSIE);
 }
 
@@ -131,7 +131,6 @@ void kerneltrap() {
     uint64 sepc = r_sepc();
     uint64 sstatus = r_sstatus();
     uint64 scause = r_scause();
-
 
     if ((sstatus & SSTATUS_SPP) == 0)
         panic("kerneltrap: not from supervisor mode");

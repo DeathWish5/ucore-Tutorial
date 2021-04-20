@@ -19,7 +19,7 @@ void main() {
     kinit();
     procinit();
     kvminit();
-    batchinit();    
+    batchinit();
     plicinit();
     binit();
     virtio_disk_init();
