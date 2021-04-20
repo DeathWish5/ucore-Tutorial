@@ -19,12 +19,12 @@ void main() {
     kinit();
     procinit();
     kvminit();
-    batchinit();
-    timerinit();
+    batchinit();    
     plicinit();
     binit();
     virtio_disk_init();
     fsinit();
+    timerinit();
     run_all_app();
     info("start scheduler!\n");
     scheduler();

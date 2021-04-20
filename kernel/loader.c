@@ -27,7 +27,7 @@ void batchinit() {
         int len = strlen(s);
         strncpy(names[i], (const char*)s, len);
         s += len + 1;
-        trace("new name: %s\n", names[i]);
+        printf("user app: %s\n", names[i]);
     }
 }
 
@@ -41,7 +41,12 @@ int get_id_by_name(char* name) {
 }
 
 void alloc_ustack(struct proc *p) {
-    if (mappages(p->pagetable, USTACK_BOTTOM, USTACK_SIZE, (uint64) kalloc(), PTE_U | PTE_R | PTE_W | PTE_X) != 0) {
+    void* page = kalloc();
+    if(page == 0) {
+        panic("can't alloc user stack");
+    }
+    memset(page, 0, PGSIZE);
+    if (mappages(p->pagetable, USTACK_BOTTOM, USTACK_SIZE, (uint64) page, PTE_U | PTE_R | PTE_W | PTE_X) != 0) {
         panic("");
     }
     p->ustack = USTACK_BOTTOM;

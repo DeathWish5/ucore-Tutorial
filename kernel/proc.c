@@ -28,6 +28,8 @@ procinit(void)
     for(p = pool; p < &pool[NPROC]; p++) {
         p->state = UNUSED;
         p->kstack = (uint64) kstack[p - pool];
+        // must after kinit()
+        p->trapframe = kalloc();
     }
     idle.kstack = (uint64)boot_stack_top;
     idle.pid = 0;
@@ -54,9 +56,8 @@ proc_pagetable(struct proc *p)
         return 0;
     }
 
-    if((p->trapframe = (struct trapframe *)kalloc()) == 0){
-        panic("kalloc\n");
-    }
+    memset(p->trapframe, 0, sizeof(struct trapframe));
+
     // map the trapframe just below TRAMPOLINE, for trampoline.S.
     if(mappages(pagetable, TRAPFRAME, PGSIZE,
                 (uint64)(p->trapframe), PTE_R | PTE_W) < 0){;
@@ -79,9 +80,6 @@ proc_freepagetable(pagetable_t pagetable, uint64 sz)
 static void
 freeproc(struct proc *p)
 {
-    if(p->trapframe)
-        kfree((void*)p->trapframe);
-    p->trapframe = 0;
     if(p->pagetable)
         proc_freepagetable(p->pagetable, p->sz);
     p->pagetable = 0;
@@ -135,7 +133,7 @@ scheduler(void)
                 p->state = RUNNING;
                 current_proc = p;
                 curr_pid = p->pid;
-                // info("switch to next proc %d\n", p->pid);
+                trace("switch to next proc %d\n", p->pid);
                 swtch(&idle.context, &p->context);
             }
         }
@@ -157,13 +155,15 @@ sched(void)
     struct proc *p = curr_proc();
     if(p->state == RUNNING)
         panic("sched running");
+    current_proc = &idle;
     swtch(&p->context, &idle.context);
 }
 
 // Give up the CPU for one scheduling round.
 void yield(void)
 {
-    current_proc->state = RUNNABLE;
+    struct proc *p = curr_proc();
+    p->state = RUNNABLE;
     sched();
 }
 
@@ -228,6 +228,7 @@ wait(int pid, int* code)
         for(np = pool; np < &pool[NPROC]; np++){
             if(np->state != UNUSED && np->parent == p && (pid <= 0 || np->pid == pid)){
                 havekids = 1;
+                // info("find child %d state = %d\n", np->pid, np->state);
                 if(np->state == ZOMBIE){
                     // Found one.
                     np->state = UNUSED;

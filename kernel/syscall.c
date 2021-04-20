@@ -114,7 +114,8 @@ uint64 sys_wait(int pid, uint64 va) {
 }
 
 uint64 sys_times() {
-    return get_time_ms();
+    uint64 time = get_time_ms();
+    return time;
 }
 
 uint64 sys_close(int fd) {

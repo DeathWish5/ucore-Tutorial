@@ -10,7 +10,6 @@ int main() {
         if(pid == 0) {
             int current_time = get_time();
             unsigned long long sleep_length = current_time * current_time % 1000 + 1000;
-            printf("pid %d sleep for %p ms\n", getpid(), sleep_length);
             sleep(sleep_length);
             printf("pid %d OK!\n", getpid());
             exit(0);

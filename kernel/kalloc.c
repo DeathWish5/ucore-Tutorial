@@ -17,7 +17,7 @@ struct {
 void
 kinit()
 {
-    printf("ekernel = %p\n", (void*)ekernel);
+    kmem.freelist = 0;
     freerange(ekernel, (void*)PHYSTOP);
 }
 
@@ -39,7 +39,6 @@ kfree(void *pa)
 {
     struct linklist *l;
     if(((uint64)pa % PGSIZE) != 0 || (char*)pa < ekernel || (uint64)pa >= PHYSTOP) {
-        printf("error free addr = %p\n", pa);
         panic("kfree");
     }
     // Fill with junk to catch dangling refs.
@@ -59,7 +58,9 @@ kalloc(void)
     l = kmem.freelist;
     if(l) {
         kmem.freelist = l->next;
-        memset((char *) l, 5, PGSIZE);// fill with junk
+        memset((char *) l, 5, PGSIZE); // fill with junk
+    } else {
+        error("memory run out\n");
     }
     return (void*)l;
 }

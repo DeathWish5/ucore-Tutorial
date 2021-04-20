@@ -258,10 +258,12 @@ virtio_disk_rw(struct buf *b, int write)
 
     // Wait for virtio_disk_intr() to say request has finished.
     struct buf volatile * _b = b;   // Make sure complier will load 'b' form memory
+    intr_on();
     while(_b->disk == 1) {
         // WARN: No kernel concurrent support, DO NOT allow kernel yield
         // yield();
     }
+    intr_off();
     // info("wait for intr over = %d\n", intr_get());
     disk.info[idx[0]].b = 0;
     free_chain(idx[0]);

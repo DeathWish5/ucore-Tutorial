@@ -45,3 +45,5 @@ struct proc {
 
     struct file* files[16];
 };
+
+extern struct proc idle;

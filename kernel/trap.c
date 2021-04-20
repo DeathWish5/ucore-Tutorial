@@ -10,16 +10,14 @@ void kernelvec();
 // set up to take exceptions and traps while in the kernel.
 void set_usertrap(void) {
     w_stvec(((uint64) TRAMPOLINE + (uservec - trampoline)) & ~0x3);     // DIRECT
-    intr_off();
 }
 
 void set_kerneltrap(void) {
     w_stvec((uint64) kernelvec & ~0x3);     // DIRECT
-    intr_on();
 }
 
 void trapinit() {
-    set_kerneltrap();
+    set_usertrap();
     w_sie(r_sie() | SIE_SEIE | SIE_STIE | SIE_SSIE);
 }
 
